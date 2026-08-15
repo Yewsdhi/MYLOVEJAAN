@@ -328,7 +328,18 @@ class Call(PyTgCalls):
         """Ported from Meera Music. Fetches a related track via YouTube Mix
         (fallback: title search), queues it with forceplay=True, starts
         playback, and sends a now-playing message. Returns True on success,
-        False on failure (caller should fall back to leave_call)."""
+        False on failure (caller should fall back to leave_call).
+
+        Resilience (added to fix the "autoplay suddenly stops" bug):
+          - Fetches a *list* of candidate tracks and tries each one in turn
+            until a download + play succeeds. A single bad video ID, a
+            transient SHRUTI API failure, or a YouTube block no longer
+            kills the whole autoplay loop.
+          - All failures are logged through LOGGER so they appear in Heroku
+            logs instead of being silently swallowed.
+          - There is NO hard limit on the number of autoplay tracks per
+            chat; the only constant is a per-chat dedup history (50
+            entries) which auto-resets when exhausted."""
         if seed_vidid:
             remember_played(chat_id, seed_vidid)
 
@@ -349,21 +360,69 @@ class Call(PyTgCalls):
                     pass
             return False
 
-        track = await fetch_autoplay_track(chat_id, seed_title, seed_vidid)
-        if not track:
+        # Fetch a list of candidates so we can fall through to the next
+        # one if the first download/play fails. This is the key resilience
+        # fix: a single bad video ID no longer kills autoplay.
+        try:
+            candidates = await fetch_autoplay_track(
+                chat_id, seed_title, seed_vidid
+            )
+        except Exception as e:
+            LOGGER(__name__).warning(
+                f"[AUTOPLAY] fetch_autoplay_track raised: "
+                f"{type(e).__name__}: {e}"
+            )
+            candidates = []
+
+        if not candidates:
+            LOGGER(__name__).warning(
+                f"[AUTOPLAY] no candidates for chat {chat_id} "
+                f"(seed_vidid={seed_vidid}, seed_title={seed_title!r})"
+            )
             return await _fail()
 
         language = await get_lang(chat_id)
         _ = get_string(language)
 
-        try:
-            file_path, direct = await YouTube.download(
-                track["vidid"], None, videoid=True
+        # Try each candidate in turn. If a candidate's download fails OR
+        # the play call fails, log it and move on to the next candidate
+        # instead of giving up on the whole autoplay step.
+        max_attempts = min(len(candidates), 3)
+        chosen_track = None
+        chosen_file_path = None
+        chosen_direct = False
+        for i, track in enumerate(candidates[:max_attempts]):
+            try:
+                file_path, direct = await YouTube.download(
+                    track["vidid"], None, videoid=True
+                )
+                if file_path:
+                    chosen_track = track
+                    chosen_file_path = file_path
+                    chosen_direct = direct
+                    break
+                LOGGER(__name__).warning(
+                    f"[AUTOPLAY] candidate {i+1}/{max_attempts} "
+                    f"vidid={track['vidid']} returned no file_path"
+                )
+            except Exception as e:
+                LOGGER(__name__).warning(
+                    f"[AUTOPLAY] candidate {i+1}/{max_attempts} "
+                    f"vidid={track['vidid']} download raised: "
+                    f"{type(e).__name__}: {e}"
+                )
+                continue
+
+        if not chosen_track or not chosen_file_path:
+            LOGGER(__name__).warning(
+                f"[AUTOPLAY] all {max_attempts} candidates failed to "
+                f"download for chat {chat_id}"
             )
-        except Exception:
             return await _fail()
-        if not file_path:
-            return await _fail()
+
+        track = chosen_track
+        file_path = chosen_file_path
+        direct = chosen_direct
 
         remember_played(chat_id, track["vidid"])
         title = track["title"].title()
@@ -394,7 +453,11 @@ class Call(PyTgCalls):
         assistant = client or await group_assistant(self, chat_id)
         try:
             await self._play_on_assistant(assistant, chat_id, stream)
-        except Exception:
+        except Exception as e:
+            LOGGER(__name__).warning(
+                f"[AUTOPLAY] _play_on_assistant failed for vidid="
+                f"{track['vidid']}: {type(e).__name__}: {e}"
+            )
             return await _fail()
 
         try:
@@ -457,8 +520,16 @@ class Call(PyTgCalls):
                         )
                         if started:
                             return
-                    except Exception:
-                        pass
+                        LOGGER(__name__).warning(
+                            f"[AUTOPLAY] autoplay_start returned False for "
+                            f"chat {chat_id} — falling back to leave_call"
+                        )
+                    except Exception as e:
+                        LOGGER(__name__).warning(
+                            f"[AUTOPLAY] autoplay_start raised in "
+                            f"change_stream (try-branch) for chat {chat_id}: "
+                            f"{type(e).__name__}: {e}"
+                        )
                 await _clear_(chat_id)
                 try:
                     buttons = InlineKeyboardMarkup(
@@ -485,7 +556,11 @@ class Call(PyTgCalls):
                 except:
                     pass
                 return await client.leave_call(chat_id, close=False)
-        except Exception:
+        except Exception as e:
+            LOGGER(__name__).warning(
+                f"[AUTOPLAY] change_stream entered except-branch for chat "
+                f"{chat_id}: {type(e).__name__}: {e}"
+            )
             try:
                 # Autoplay fallback in the except branch too — if the queue
                 # is empty but autoplay is on, try to start a related track
@@ -501,8 +576,16 @@ class Call(PyTgCalls):
                         )
                         if started:
                             return
-                    except Exception:
-                        pass
+                        LOGGER(__name__).warning(
+                            f"[AUTOPLAY] autoplay_start returned False in "
+                            f"except-branch for chat {chat_id}"
+                        )
+                    except Exception as e2:
+                        LOGGER(__name__).warning(
+                            f"[AUTOPLAY] autoplay_start raised in "
+                            f"change_stream (except-branch) for chat "
+                            f"{chat_id}: {type(e2).__name__}: {e2}"
+                        )
                 await _clear_(chat_id)
                 try:
                     buttons = InlineKeyboardMarkup(

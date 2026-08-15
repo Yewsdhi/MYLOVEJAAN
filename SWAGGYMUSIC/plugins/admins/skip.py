@@ -2,7 +2,7 @@ from pyrogram import filters
 from pyrogram.types import InlineKeyboardMarkup, Message
 
 import config
-from SWAGGYMUSIC import YouTube, app
+from SWAGGYMUSIC import LOGGER, YouTube, app
 from SWAGGYMUSIC.core.call import Swaggy
 from SWAGGYMUSIC.misc import db
 from SWAGGYMUSIC.utils.database import get_loop, is_autoplay_on
@@ -52,8 +52,16 @@ async def skip(cli, message: Message, _, chat_id):
                                         )
                                         if started:
                                             return
-                                    except Exception:
-                                        pass
+                                        LOGGER(__name__).warning(
+                                            f"[AUTOPLAY] skip batch: autoplay_start "
+                                            f"returned False for chat {chat_id}"
+                                        )
+                                    except Exception as e:
+                                        LOGGER(__name__).warning(
+                                            f"[AUTOPLAY] skip batch: autoplay_start "
+                                            f"raised for chat {chat_id}: "
+                                            f"{type(e).__name__}: {e}"
+                                        )
                                 try:
                                     await message.reply_text(
                                         text=_["admin_6"].format(
@@ -93,8 +101,16 @@ async def skip(cli, message: Message, _, chat_id):
                         )
                         if started:
                             return
-                    except Exception:
-                        pass
+                        LOGGER(__name__).warning(
+                            f"[AUTOPLAY] skip single: autoplay_start "
+                            f"returned False for chat {chat_id}"
+                        )
+                    except Exception as e:
+                        LOGGER(__name__).warning(
+                            f"[AUTOPLAY] skip single: autoplay_start "
+                            f"raised for chat {chat_id}: "
+                            f"{type(e).__name__}: {e}"
+                        )
                 await message.reply_text(
                     text=_["admin_6"].format(
                         message.from_user.mention, message.chat.title
@@ -118,8 +134,16 @@ async def skip(cli, message: Message, _, chat_id):
                         )
                         if started:
                             return
-                    except Exception:
-                        pass
+                        LOGGER(__name__).warning(
+                            f"[AUTOPLAY] skip except: autoplay_start "
+                            f"returned False for chat {chat_id}"
+                        )
+                    except Exception as e:
+                        LOGGER(__name__).warning(
+                            f"[AUTOPLAY] skip except: autoplay_start "
+                            f"raised for chat {chat_id}: "
+                            f"{type(e).__name__}: {e}"
+                        )
                 await message.reply_text(
                     text=_["admin_6"].format(
                         message.from_user.mention, message.chat.title

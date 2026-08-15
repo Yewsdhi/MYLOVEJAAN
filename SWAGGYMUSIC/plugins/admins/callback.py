@@ -3,7 +3,7 @@ from telegram import CallbackQuery
 from pyrogram import filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-from SWAGGYMUSIC import YouTube, app
+from SWAGGYMUSIC import LOGGER, YouTube, app
 from SWAGGYMUSIC.core.call import Swaggy
 from SWAGGYMUSIC.misc import SUDOERS, db
 from SWAGGYMUSIC.utils.database import (
@@ -228,8 +228,16 @@ async def del_back_playlist(client, CallbackQuery, _):
                             if started:
                                 await CallbackQuery.edit_message_text(txt, reply_markup=close_markup(_))
                                 return
-                        except Exception:
-                            pass
+                            LOGGER(__name__).warning(
+                                f"[AUTOPLAY] callback Skip: autoplay_start "
+                                f"returned False for chat {chat_id}"
+                            )
+                        except Exception as e:
+                            LOGGER(__name__).warning(
+                                f"[AUTOPLAY] callback Skip: autoplay_start "
+                                f"raised for chat {chat_id}: "
+                                f"{type(e).__name__}: {e}"
+                            )
                     await CallbackQuery.edit_message_text(
                         f"➻ sᴛʀᴇᴀᴍ sᴋɪᴩᴩᴇᴅ 🎄\n│ \n└ʙʏ : {mention} 🥀"
                     )
@@ -257,8 +265,16 @@ async def del_back_playlist(client, CallbackQuery, _):
                             if started:
                                 await CallbackQuery.edit_message_text(txt, reply_markup=close_markup(_))
                                 return
-                        except Exception:
-                            pass
+                            LOGGER(__name__).warning(
+                                f"[AUTOPLAY] callback Skip except: "
+                                f"autoplay_start returned False for chat {chat_id}"
+                            )
+                        except Exception as e:
+                            LOGGER(__name__).warning(
+                                f"[AUTOPLAY] callback Skip except: "
+                                f"autoplay_start raised for chat {chat_id}: "
+                                f"{type(e).__name__}: {e}"
+                            )
                     await CallbackQuery.edit_message_text(
                         f"➻ sᴛʀᴇᴀᴍ sᴋɪᴩᴩᴇᴅ 🎄\n│ \n└ʙʏ : {mention} 🥀"
                     )

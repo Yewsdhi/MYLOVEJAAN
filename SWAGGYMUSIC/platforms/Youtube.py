@@ -14,6 +14,55 @@ API_KEY = os.environ.get("SHRUTI_API_KEY", "ShrutiBotsjyOuNr6aH5inWY06YDYJ") ## 
 
 DOWNLOAD_DIR = "downloads"
 
+# Minimum size for a real audio/video file. Anything smaller is almost
+# certainly an error page (SHRUTI's API sometimes returns a ~38KB Telegram
+# web-preview HTML page with content-type: audio/mpeg when the backend is
+# degraded). Without this guard, the HTML gets saved as .mp3 and PyTgCalls
+# / ffmpeg then spends minutes trying to probe it as audio before failing.
+_MIN_AUDIO_BYTES = 100_000  # ~100 KB — a real song is at least 1–3 MB
+_MIN_VIDEO_BYTES = 200_000  # ~200 KB — a real video is at least a few MB
+
+
+def _looks_like_audio(data: bytes) -> bool:
+    """Heuristic check: real audio/video files start with known magic
+    bytes (ID3 for MP3, ftyp for MP4/M4A, RIFF for WAV, OggS for Ogg,
+    \x1A\x45\xDF for WebM/Matroska). HTML responses start with `<!DOCTYPE`
+    or `<html`. If we see HTML or the size is too small, treat it as a
+    failure so the caller can fall back rather than feeding garbage to
+    ffmpeg."""
+    if not data or len(data) < 2048:
+        return False
+    head = data[:16]
+    # Common audio/video magic bytes
+    if head.startswith(b"ID3"):  # MP3 with ID3v2 tag
+        return True
+    if head.startswith(b"\xff\xfb") or head.startswith(b"\xff\xf3") or head.startswith(b"\xff\xfa"):
+        # MP3 frame sync
+        return True
+    if head[4:8] == b"ftyp":  # MP4/M4A/M4V
+        return True
+    if head.startswith(b"RIFF") and head[8:12] == b"WAVE":
+        return True
+    if head.startswith(b"OggS"):
+        return True
+    if head.startswith(b"\x1a\x45\xdf\xa3"):
+        # WebM / Matroska
+        return True
+    if head.startswith(b"\x00\x00\x00") and len(data) > _MIN_AUDIO_BYTES:
+        # Could be a ftyp box with a different offset, or a generic
+        # binary container. If it's big enough and starts with a NUL byte,
+        # it's almost certainly a real media file, not HTML.
+        return True
+    # HTML / JSON / XML — definitely not audio
+    if head[:5].lower() in (b"<!doc", b"<html", b"<?xml"):
+        return False
+    if head[:1] == b"{":
+        return False
+    # If it's big enough and doesn't look like text, accept it
+    if len(data) >= _MIN_AUDIO_BYTES and b"<" not in head[:8]:
+        return True
+    return False
+
 
 def time_to_seconds(time):
     stringt = str(time)
@@ -27,7 +76,7 @@ async def download_song(link: str) -> str:
 
     os.makedirs(DOWNLOAD_DIR, exist_ok=True)
     file_path = os.path.join(DOWNLOAD_DIR, f"{video_id}.mp3")
-    if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+    if os.path.exists(file_path) and os.path.getsize(file_path) > _MIN_AUDIO_BYTES:
         return file_path
 
     try:
@@ -39,10 +88,20 @@ async def download_song(link: str) -> str:
             ) as resp:
                 if resp.status != 200:
                     return None
+                # Read the full body first so we can validate it before
+                # committing it to disk. The previous code streamed chunks
+                # straight to a file and trusted `getsize > 0`, which let
+                # HTML error pages through as fake .mp3 files.
+                data = await resp.read()
+                if not _looks_like_audio(data):
+                    # The API returned something that isn't a real audio
+                    # file (often an HTML error/preview page with a forged
+                    # content-type). Treat it as a failure so the caller
+                    # can fall back rather than feeding garbage to ffmpeg.
+                    return None
                 with open(file_path, "wb") as f:
-                    async for chunk in resp.content.iter_chunked(131072):
-                        f.write(chunk)
-        if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+                    f.write(data)
+        if os.path.exists(file_path) and os.path.getsize(file_path) > _MIN_AUDIO_BYTES:
             return file_path
         return None
     except Exception:
@@ -61,7 +120,7 @@ async def download_video(link: str) -> str:
 
     os.makedirs(DOWNLOAD_DIR, exist_ok=True)
     file_path = os.path.join(DOWNLOAD_DIR, f"{video_id}.mp4")
-    if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+    if os.path.exists(file_path) and os.path.getsize(file_path) > _MIN_VIDEO_BYTES:
         return file_path
 
     try:
@@ -73,10 +132,14 @@ async def download_video(link: str) -> str:
             ) as resp:
                 if resp.status != 200:
                     return None
+                data = await resp.read()
+                if not _looks_like_audio(data):
+                    # Same guard as download_song — reject HTML/JSON error
+                    # pages that would otherwise be saved as fake .mp4.
+                    return None
                 with open(file_path, "wb") as f:
-                    async for chunk in resp.content.iter_chunked(131072):
-                        f.write(chunk)
-        if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+                    f.write(data)
+        if os.path.exists(file_path) and os.path.getsize(file_path) > _MIN_VIDEO_BYTES:
             return file_path
         return None
     except Exception:

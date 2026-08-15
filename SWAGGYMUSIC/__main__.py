@@ -7,6 +7,7 @@ from pytgcalls.exceptions import NoActiveGroupCall
 import config
 from SWAGGYMUSIC import LOGGER, app, userbot
 from SWAGGYMUSIC.core.call import Swaggy
+from SWAGGYMUSIC.core.prewarm import prewarm_all
 from SWAGGYMUSIC.misc import sudo
 from SWAGGYMUSIC.plugins import ALL_MODULES
 from SWAGGYMUSIC.utils.database import get_banned_users, get_gbanned
@@ -37,8 +38,22 @@ async def init():
     for all_module in ALL_MODULES:
         importlib.import_module("SWAGGYMUSIC.plugins" + all_module)
     LOGGER("SWAGGYMUSIC.plugins").info("𝐀𝐥𝐥 𝐅𝐞𝐚𝐭𝐮𝐫𝐞𝐬 𝐋𝐨𝐚𝐝𝐞𝐝 𝐁𝐚𝐛𝐲🥳...")
+    # Prewarm expensive resources (SHRUTI API, py_yt, yt-dlp, i.ytimg)
+    # concurrently with userbot/Swaggy startup so the first /play after a
+    # restart doesn't pay the cold-start penalty. Best-effort: failures
+    # are logged but never block startup.
+    prewarm_task = asyncio.create_task(prewarm_all())
     await userbot.start()
     await Swaggy.start()
+    # Don't block the banner on prewarm — it has its own internal timeouts
+    # (max 10s) and runs in the background. If it's not done by the time
+    # we need to play, the first /play will just fall back to the cold path
+    # for whatever resource wasn't prewarmed yet.
+    prewarm_task.add_done_callback(
+        lambda t: t.exception() and LOGGER(__name__).warning(
+            f"prewarm task error: {t.exception()}"
+        )
+    )
     try:
         await Swaggy.stream_call("https://te.legra.ph/file/29f784eb49d230ab62e9e.mp4")
     except NoActiveGroupCall:
