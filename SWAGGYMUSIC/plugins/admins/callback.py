@@ -175,6 +175,12 @@ async def del_back_playlist(client, CallbackQuery, _):
         await CallbackQuery.answer()
         await Swaggy.stop_stream(chat_id)
         await set_loop(chat_id, 0)
+        # Reset autoplay for this chat (matches /autoplay help text:
+        # "autoplay setting resets when music ended or stopped by someone").
+        try:
+            await autoplay_off(chat_id)
+        except Exception:
+            pass
         await CallbackQuery.message.reply_text(
             _["admin_5"].format(mention), reply_markup=close_markup(_)
         )

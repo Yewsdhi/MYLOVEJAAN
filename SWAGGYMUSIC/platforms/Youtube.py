@@ -122,13 +122,47 @@ class YouTubeAPI:
             link = self.base + link
         if "&" in link:
             link = link.split("&")[0]
-        results = VideosSearch(link, limit=1)
-        for result in (await results.next())["result"]:
-            title = result["title"]
-            duration_min = result["duration"]
-            thumbnail = result["thumbnails"][0]["url"].split("?")[0]
-            vidid = result["id"]
-            duration_sec = int(time_to_seconds(duration_min)) if duration_min else 0
+        # When videoid=True, link is now https://www.youtube.com/watch?v=<vidid>.
+        # Use the canonical i.ytimg.com thumbnail URL for that exact video id
+        # instead of trusting VideosSearch to return the same video as top hit.
+        results = VideosSearch(link, limit=10)
+        try:
+            res_list = (await results.next()).get("result", []) or []
+        except Exception:
+            res_list = []
+        chosen = None
+        if videoid and res_list:
+            try:
+                wanted = link.split("v=")[1].split("&")[0]
+            except Exception:
+                wanted = None
+            if wanted:
+                for r in res_list:
+                    if str(r.get("id", "")) == str(wanted):
+                        chosen = r
+                        break
+            if chosen is None and res_list:
+                chosen = res_list[0]
+        elif res_list:
+            chosen = self._pick_official(res_list, link)
+        if chosen is None:
+            try:
+                _vid = link.split("v=")[1].split("&")[0] if "v=" in link else link
+            except Exception:
+                _vid = link
+            return (
+                "Unknown Title",
+                "0:00",
+                0,
+                f"https://i.ytimg.com/vi/{_vid}/hqdefault.jpg",
+                _vid,
+            )
+        title = chosen["title"]
+        duration_min = chosen.get("duration") or "0:00"
+        vidid = chosen["id"]
+        # Canonical thumbnail — 1:1 with the chosen video id, never wrong.
+        thumbnail = f"https://i.ytimg.com/vi/{vidid}/hqdefault.jpg"
+        duration_sec = int(time_to_seconds(duration_min)) if duration_min else 0
         return title, duration_min, duration_sec, thumbnail, vidid
 
     async def title(self, link: str, videoid: Union[bool, str] = None):
@@ -154,9 +188,14 @@ class YouTubeAPI:
             link = self.base + link
         if "&" in link:
             link = link.split("&")[0]
-        results = VideosSearch(link, limit=1)
-        for result in (await results.next())["result"]:
-            return result["thumbnails"][0]["url"].split("?")[0]
+        # Canonical YouTube thumbnail URL — always 1:1 with the exact video
+        # id. The previous implementation called VideosSearch and used the
+        # top result's thumbnail, which could be a *different* video.
+        try:
+            vid = link.split("v=")[1].split("&")[0]
+        except Exception:
+            vid = link
+        return f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg"
 
     async def video(self, link: str, videoid: Union[bool, str] = None):
         if videoid:
@@ -192,17 +231,75 @@ class YouTubeAPI:
         return ids
 
     async def track(self, link: str, videoid: Union[bool, str] = None):
+        # When videoid=True is passed, `link` is a bare YouTube video ID
+        # (e.g. "dQw4w9WgXcQ"). Build the canonical watch-URL but DO NOT
+        # rely on VideosSearch returning that exact video as the top hit —
+        # py_yt / youtube-search-python can surface a related video instead,
+        # which would give us the wrong title/duration/thumbnail for the
+        # result the user actually selected. Instead we:
+        #   1. Use the canonical i.ytimg.com thumbnail URL (1:1 with vidid).
+        #   2. Search with limit=10 and pick the entry whose id *exactly*
+        #      matches the requested videoid. If no exact match, fall back
+        #      to the first result but with the canonical thumbnail URL so
+        #      the thumbnail is always correct for the chosen video.
         if videoid:
             link = self.base + link
         if "&" in link:
             link = link.split("&")[0]
-        results = VideosSearch(link, limit=1)
-        for result in (await results.next())["result"]:
-            title = result["title"]
-            duration_min = result["duration"]
-            vidid = result["id"]
-            yturl = result["link"]
-            thumbnail = result["thumbnails"][0]["url"].split("?")[0]
+
+        search_query = link
+        results = VideosSearch(search_query, limit=10)
+        chosen = None
+        try:
+            res_list = (await results.next()).get("result", []) or []
+        except Exception:
+            res_list = []
+
+        if videoid and res_list:
+            try:
+                wanted = link.split("v=")[1].split("&")[0]
+            except Exception:
+                wanted = None
+            if wanted:
+                for r in res_list:
+                    if str(r.get("id", "")) == str(wanted):
+                        chosen = r
+                        break
+            if chosen is None:
+                chosen = res_list[0]
+        elif res_list:
+            # Text/URL search mode — prefer official / authoritative uploads
+            # (official artist channels, "Topic" auto-generated audio, VEVO,
+            # channels whose name contains "Official"). Falls back to the
+            # first result if none of the candidates look official.
+            chosen = self._pick_official(res_list, search_query)
+
+        if chosen is None:
+            # No search result at all — synthesise a minimal details dict
+            # so downstream code doesn't crash.
+            import config as _cfg
+            try:
+                _vid = link.split("v=")[1].split("&")[0] if "v=" in link else link
+            except Exception:
+                _vid = link
+            fallback_thumb = f"https://i.ytimg.com/vi/{_vid}/hqdefault.jpg"
+            track_details = {
+                "title": "Unknown Title",
+                "link": link,
+                "vidid": _vid,
+                "duration_min": "0:00",
+                "thumb": fallback_thumb,
+            }
+            return track_details, _vid
+
+        title = chosen["title"]
+        duration_min = chosen.get("duration") or "0:00"
+        vidid = chosen["id"]
+        yturl = chosen.get("link") or f"https://www.youtube.com/watch?v={vidid}"
+        # ALWAYS prefer the canonical i.ytimg.com thumbnail for the chosen
+        # video id. This is the root-cause fix for "wrong thumbnail" reports:
+        # the search API's thumbnail URL is sometimes for a different video.
+        thumbnail = f"https://i.ytimg.com/vi/{vidid}/hqdefault.jpg"
         track_details = {
             "title": title,
             "link": yturl,
@@ -211,6 +308,52 @@ class YouTubeAPI:
             "thumb": thumbnail,
         }
         return track_details, vidid
+
+    @staticmethod
+    def _pick_official(results, query):
+        """Pick the most authoritative result from a list of search hits.
+        Heuristics (in order):
+          1. Exact title+channel match where the channel looks official
+             (contains 'Official', 'Topic', 'VEVO', or ends with 'VEVO').
+          2. Channel name contains 'Official' or 'Topic' or 'VEVO'.
+          3. Title contains 'Official' or 'Official Audio' or 'Official Video'.
+          4. First result (YouTube's relevance ranking).
+        We never hard-code specific channel IDs — the choice is driven by
+        the search result's own title/channel metadata, which is what the
+        user actually sees in the slider."""
+        if not results:
+            return None
+
+        def channel_score(r):
+            ch = (r.get("channel") or {}).get("name", "") or ""
+            title = r.get("title", "") or ""
+            ch_l = ch.lower()
+            t_l = title.lower()
+            score = 0
+            if "official" in ch_l:
+                score += 5
+            if "vevo" in ch_l or ch_l.endswith("vevo"):
+                score += 5
+            if "topic" in ch_l:
+                score += 4
+            if "music" in ch_l:
+                score += 1
+            if "official" in t_l:
+                score += 2
+            if "official audio" in t_l or "official video" in t_l:
+                score += 2
+            # Prefer non-live, non-shorts results with a sane duration.
+            dur = r.get("duration")
+            if dur and ":" in str(dur):
+                score += 1
+            return score
+
+        best = max(results, key=channel_score)
+        # If the best score is 0 (nothing looks official), fall back to the
+        # first result — that's what YouTube's relevance ranking picked.
+        if channel_score(best) == 0:
+            return results[0]
+        return best
 
     async def formats(self, link: str, videoid: Union[bool, str] = None):
         if videoid:
@@ -249,7 +392,9 @@ class YouTubeAPI:
         title = result[query_type]["title"]
         duration_min = result[query_type]["duration"]
         vidid = result[query_type]["id"]
-        thumbnail = result[query_type]["thumbnails"][0]["url"].split("?")[0]
+        # Canonical thumbnail for the *exact* selected slider entry — never
+        # a different video's art.
+        thumbnail = f"https://i.ytimg.com/vi/{vidid}/hqdefault.jpg"
         return title, duration_min, thumbnail, vidid
 
     async def download(

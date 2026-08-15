@@ -1,12 +1,87 @@
 import asyncio
 import os, aiofiles, aiohttp
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
-from py_yt import VideosSearch
 from config import YOUTUBE_IMG_URL
 from SWAGGYMUSIC import app
 
 CACHE_DIR = "cache"
 os.makedirs(CACHE_DIR, exist_ok=True)
+
+# Canonical YouTube thumbnail URL candidates for a given video ID, in order
+# of preference. These URLs are 1:1 with the exact video ID — they NEVER
+# return a different video's thumbnail. The previous implementation called
+# VideosSearch("https://www.youtube.com/watch?v=<vid>", limit=1) and used
+# the top result's thumbnail URL, but py_yt can surface a related video as
+# the top hit, which gave us the WRONG thumbnail for the song that was
+# actually playing. Using i.ytimg.com directly fixes the root cause.
+_THUMB_URLS = (
+    "https://i.ytimg.com/vi/{vid}/maxresdefault.jpg",
+    "https://i.ytimg.com/vi/{vid}/sddefault.jpg",
+    "https://i.ytimg.com/vi/{vid}/hqdefault.jpg",
+    "https://i.ytimg.com/vi/{vid}/mqdefault.jpg",
+)
+
+
+async def _fetch_raw_thumbnail(videoid: str) -> str:
+    """Download the thumbnail for the EXACT video id `videoid` from the
+    canonical i.ytimg.com URLs. Returns the local path, or "" on failure.
+    Tries maxres -> sd -> hq -> mq in order (YouTube doesn't always have
+    maxresdefault for every video, but always has hqdefault)."""
+    thumb_path = os.path.join(CACHE_DIR, f"raw_{videoid}.jpg")
+    if os.path.exists(thumb_path) and os.path.getsize(thumb_path) > 0:
+        return thumb_path
+    async with aiohttp.ClientSession() as s:
+        for tmpl in _THUMB_URLS:
+            url = tmpl.format(vid=videoid)
+            try:
+                async with s.get(url, timeout=aiohttp.ClientTimeout(total=15)) as r:
+                    if r.status != 200:
+                        continue
+                    data = await r.read()
+                    if not data or len(data) < 1024:
+                        # YouTube sometimes returns a 120x90 grey placeholder
+                        # JPG for missing thumbnails — skip those.
+                        continue
+                    async with aiofiles.open(thumb_path, "wb") as f:
+                        await f.write(data)
+                    return thumb_path
+            except Exception:
+                continue
+    return ""
+
+
+async def _fetch_video_meta(videoid: str) -> dict:
+    """Best-effort fetch of title/artist/duration/views for the card overlay.
+    The thumbnail itself NEVER depends on this — it's always the exact-video
+    i.ytimg.com URL fetched by `_fetch_raw_thumbnail`. If metadata cannot be
+    fetched (e.g. py_yt offline), sensible defaults are returned and the
+    card still renders with the correct thumbnail.
+
+    We pick the search result whose `id` EXACTLY matches the requested
+    videoid — this prevents the "wrong metadata" bug where py_yt returned
+    a different top hit for a watch-URL query."""
+    try:
+        from py_yt import VideosSearch
+        search = VideosSearch(videoid, limit=10)
+        data = await search.next()
+        results = data.get("result", []) if isinstance(data, dict) else []
+        for r in results:
+            if str(r.get("id", "")) == str(videoid):
+                return {
+                    "title": r.get("title") or "Unknown Title",
+                    "artist": (r.get("channel") or {}).get("name") or "Unknown Artist",
+                    "duration": r.get("duration") or "00:00",
+                    "views": (r.get("viewCount", {}) or {}).get("short") or "0 views",
+                }
+    except Exception:
+        pass
+    return {
+        "title": "Unknown Title",
+        "artist": "Unknown Artist",
+        "duration": "00:00",
+        "views": "0 views",
+    }
+
 
 def trim_to_width(text: str, font: ImageFont.FreeTypeFont, max_width: int) -> str:
     ellipsis = "..."
@@ -19,23 +94,30 @@ def trim_to_width(text: str, font: ImageFont.FreeTypeFont, max_width: int) -> st
     return ellipsis
 
 def _generate_thumb_sync(videoid: str, title: str, artist: str, duration: str,
-                          views: str, thumbnail_url: str, player_username: str) -> str:
+                          views: str, thumbnail_path: str, player_username: str) -> str:
     """Synchronous PIL processing — runs in thread executor to avoid
     blocking the asyncio event loop. Returns the cached thumbnail path
-    or YOUTUBE_IMG_URL on failure."""
+    or YOUTUBE_IMG_URL on failure.
+
+    NOTE: `thumbnail_path` is the LOCAL path to the already-downloaded
+    raw thumbnail (fetched by `_fetch_raw_thumbnail` from the canonical
+    i.ytimg.com URL for this exact video id). The previous implementation
+    took a `thumbnail_url` and downloaded it inside this sync function
+    via urllib — that was a problem because the URL came from
+    VideosSearch and could be for a DIFFERENT video."""
     cache_path = os.path.join(CACHE_DIR, f"{videoid}_shashank.png")
     if os.path.exists(cache_path):
         return cache_path
 
-    thumb_path = os.path.join(CACHE_DIR, f"raw_{videoid}.jpg")
+    if not thumbnail_path or not os.path.exists(thumbnail_path):
+        return YOUTUBE_IMG_URL
+
     try:
-        import urllib.request
-        urllib.request.urlretrieve(thumbnail_url, thumb_path)
+        img = Image.open(thumbnail_path).convert("RGBA")
     except Exception:
         return YOUTUBE_IMG_URL
 
     W, H = 1280, 720
-    img = Image.open(thumb_path).convert("RGBA")
     bg = img.resize((W, H))
     bg = bg.filter(ImageFilter.GaussianBlur(radius=40))
     enhancer = ImageEnhance.Brightness(bg)
@@ -111,7 +193,7 @@ def _generate_thumb_sync(videoid: str, title: str, artist: str, duration: str,
     bg.save(cache_path, quality=95)
 
     try:
-        os.remove(thumb_path)
+        os.remove(thumbnail_path)
     except:
         pass
 
@@ -126,29 +208,33 @@ async def get_thumb(videoid: str, player_username: str = None) -> str:
     if os.path.exists(cache_path):
         return cache_path
 
-    try:
-        results = VideosSearch(f"https://www.youtube.com/watch?v={videoid}", limit=1)
-        search_result = await results.next()
-        data = search_result.get("result", [])[0]
+    # 1. Fetch the thumbnail from the canonical i.ytimg.com URLs for the
+    #    EXACT video id. This is the root-cause fix for "wrong thumbnail"
+    #    reports — the previous code used VideosSearch's top-result URL
+    #    which could be for a different video.
+    thumb_path = await _fetch_raw_thumbnail(videoid)
+    if not thumb_path:
+        # All canonical YouTube thumbnail URLs failed for this ID — fall
+        # back to the generic YouTube image rather than guessing with
+        # another search.
+        return YOUTUBE_IMG_URL
 
-        title = data.get("title") or "Unknown Title"
-        artist = data.get("channel", {}).get("name") or "Unknown Artist"
-        duration = data.get("duration") or "00:00"
-        views = data.get("viewCount", {}).get("short") or "0 views"
-        thumbnail = data.get("thumbnails", [{}])[0].get("url") or YOUTUBE_IMG_URL
-    except Exception:
-        title = "Unknown Title"
-        artist = "Unknown Artist"
-        duration = "05:00"
-        views = "1M views"
-        thumbnail = YOUTUBE_IMG_URL
+    # 2. Best-effort metadata for the card overlay. If this fails, the
+    #    card still renders with the correct thumbnail.
+    meta = await _fetch_video_meta(videoid)
 
-    # Run the PIL processing in a thread executor so it doesn't block
-    # the asyncio event loop (PIL is synchronous and CPU-intensive).
+    # 3. Run the PIL processing in a thread executor so it doesn't block
+    #    the asyncio event loop (PIL is synchronous and CPU-intensive).
     try:
         return await asyncio.to_thread(
             _generate_thumb_sync,
-            videoid, title, artist, duration, views, thumbnail, player_username
+            videoid,
+            meta["title"],
+            meta["artist"],
+            meta["duration"],
+            meta["views"],
+            thumb_path,
+            player_username,
         )
     except Exception:
         return YOUTUBE_IMG_URL
