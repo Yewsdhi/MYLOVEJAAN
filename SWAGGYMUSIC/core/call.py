@@ -90,6 +90,11 @@ class Call(PyTgCalls):
             session_string=str(config.STRING5),
         )
         self.five = PyTgCalls(self.userbot5, cache_duration=100)
+        # Per-chat locks to serialize change_stream calls and prevent
+        # concurrent queue mutations from racing (e.g. PyTgCalls firing
+        # StreamEnded twice, or a user clicking Skip at the exact moment
+        # a track ends).
+        self._change_stream_locks = {}
 
     def _build_stream(
         self,
@@ -360,6 +365,11 @@ class Call(PyTgCalls):
                     pass
             return False
 
+        LOGGER(__name__).info(
+            f"[AUTOPLAY] autoplay_start called for chat {chat_id} "
+            f"(seed_vidid={seed_vidid}, seed_title={seed_title!r})"
+        )
+
         # Fetch a list of candidates so we can fall through to the next
         # one if the first download/play fails. This is the key resilience
         # fix: a single bad video ID no longer kills autoplay.
@@ -381,84 +391,113 @@ class Call(PyTgCalls):
             )
             return await _fail()
 
+        LOGGER(__name__).info(
+            f"[AUTOPLAY] found {len(candidates)} candidates for chat {chat_id}"
+        )
+
         language = await get_lang(chat_id)
         _ = get_string(language)
 
-        # Try each candidate in turn. If a candidate's download fails OR
-        # the play call fails, log it and move on to the next candidate
-        # instead of giving up on the whole autoplay step.
-        max_attempts = min(len(candidates), 3)
+        # Try EACH candidate in turn (not just the first 3). If a
+        # candidate's download fails OR the play call fails with a
+        # transient error, log it and move on to the next candidate.
+        # Only NoActiveGroupCall (voice chat genuinely gone) aborts the
+        # whole step — every other failure tries the next candidate.
         chosen_track = None
-        chosen_file_path = None
-        chosen_direct = False
-        for i, track in enumerate(candidates[:max_attempts]):
+        for i, track in enumerate(candidates):
+            vidid = track.get("vidid")
             try:
                 file_path, direct = await YouTube.download(
-                    track["vidid"], None, videoid=True
+                    vidid, None, videoid=True
                 )
-                if file_path:
-                    chosen_track = track
-                    chosen_file_path = file_path
-                    chosen_direct = direct
-                    break
-                LOGGER(__name__).warning(
-                    f"[AUTOPLAY] candidate {i+1}/{max_attempts} "
-                    f"vidid={track['vidid']} returned no file_path"
-                )
+                if not file_path:
+                    LOGGER(__name__).warning(
+                        f"[AUTOPLAY] candidate {i+1}/{len(candidates)} "
+                        f"vidid={vidid} returned no file_path"
+                    )
+                    continue
             except Exception as e:
                 LOGGER(__name__).warning(
-                    f"[AUTOPLAY] candidate {i+1}/{max_attempts} "
-                    f"vidid={track['vidid']} download raised: "
+                    f"[AUTOPLAY] candidate {i+1}/{len(candidates)} "
+                    f"vidid={vidid} download raised: "
                     f"{type(e).__name__}: {e}"
                 )
                 continue
 
-        if not chosen_track or not chosen_file_path:
+            # Download succeeded — queue it, then try to play it.
+            remember_played(chat_id, vidid)
+            title = track["title"].title()
+            duration_min = track["duration_min"]
+
+            await put_queue(
+                chat_id,
+                original_chat_id,
+                file_path if direct else f"vid_{vidid}",
+                title,
+                duration_min,
+                "🔁 𝐀ᴜᴛᴏᴘʟᴀʏ",
+                vidid,
+                1,
+                "audio",
+                forceplay=True,
+            )
+            if db.get(chat_id):
+                db[chat_id][0]["played"] = 0
+                db[chat_id][0]["seconds"] = 0
+                db[chat_id][0]["speed"] = 1.0
+                db[chat_id][0]["speed_path"] = None
+                db[chat_id][0]["old_dur"] = None
+                db[chat_id][0]["old_second"] = 0
+
+            stream = self._build_stream(file_path, video=False)
+            assistant = client or await group_assistant(self, chat_id)
+            try:
+                await self._play_on_assistant(assistant, chat_id, stream)
+            except exceptions.NoActiveGroupCall as e:
+                # Voice chat is gone — trying more candidates won't help.
+                LOGGER(__name__).warning(
+                    f"[AUTOPLAY] _play_on_assistant failed with "
+                    f"NoActiveGroupCall for chat {chat_id} — voice chat "
+                    f"is gone, stopping autoplay"
+                )
+                # Undo the queue insertion we just did so db[chat_id]
+                # stays consistent.
+                try:
+                    db[chat_id].pop(0)
+                except Exception:
+                    pass
+                return await _fail()
+            except Exception as e:
+                LOGGER(__name__).warning(
+                    f"[AUTOPLAY] _play_on_assistant failed for "
+                    f"vidid={vidid}: {type(e).__name__}: {e} "
+                    f"— trying next candidate"
+                )
+                # Undo the queue insertion and try the next candidate.
+                try:
+                    db[chat_id].pop(0)
+                except Exception:
+                    pass
+                continue
+
+            # Success!
+            chosen_track = track
+            LOGGER(__name__).info(
+                f"[AUTOPLAY] candidate {i+1}/{len(candidates)} "
+                f"vidid={vidid} playing successfully"
+            )
+            break
+
+        if not chosen_track:
             LOGGER(__name__).warning(
-                f"[AUTOPLAY] all {max_attempts} candidates failed to "
-                f"download for chat {chat_id}"
+                f"[AUTOPLAY] all {len(candidates)} candidates failed for "
+                f"chat {chat_id}"
             )
             return await _fail()
 
         track = chosen_track
-        file_path = chosen_file_path
-        direct = chosen_direct
-
-        remember_played(chat_id, track["vidid"])
         title = track["title"].title()
         duration_min = track["duration_min"]
-
-        await put_queue(
-            chat_id,
-            original_chat_id,
-            file_path if direct else f"vid_{track['vidid']}",
-            title,
-            duration_min,
-            "🔁 𝐀ᴜᴛᴏᴘʟᴀʏ",
-            track["vidid"],
-            1,
-            "audio",
-            forceplay=True,
-        )
-
-        if db.get(chat_id):
-            db[chat_id][0]["played"] = 0
-            db[chat_id][0]["seconds"] = 0
-            db[chat_id][0]["speed"] = 1.0
-            db[chat_id][0]["speed_path"] = None
-            db[chat_id][0]["old_dur"] = None
-            db[chat_id][0]["old_second"] = 0
-
-        stream = self._build_stream(file_path, video=False)
-        assistant = client or await group_assistant(self, chat_id)
-        try:
-            await self._play_on_assistant(assistant, chat_id, stream)
-        except Exception as e:
-            LOGGER(__name__).warning(
-                f"[AUTOPLAY] _play_on_assistant failed for vidid="
-                f"{track['vidid']}: {type(e).__name__}: {e}"
-            )
-            return await _fail()
 
         try:
             img = await get_thumb(track["vidid"])
@@ -477,8 +516,11 @@ class Call(PyTgCalls):
             )
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "stream"
-        except Exception:
-            pass
+        except Exception as e:
+            LOGGER(__name__).warning(
+                f"[AUTOPLAY] failed to send now-playing message for "
+                f"chat {chat_id}: {type(e).__name__}: {e} (playback continues)"
+            )
 
         if status_msg:
             try:
@@ -492,10 +534,151 @@ class Call(PyTgCalls):
         except Exception:
             pass
 
+        LOGGER(__name__).info(
+            f"[AUTOPLAY] autoplay_start succeeded for chat {chat_id} "
+            f"(vidid={track['vidid']})"
+        )
         return True
 
+    async def _try_autoplay_with_retry(
+        self,
+        chat_id: int,
+        popped: dict | None,
+        client: PyTgCalls,
+        max_retries: int = 2,
+    ) -> bool:
+        """Try autoplay_start up to max_retries+1 times with a brief delay
+        between attempts. Returns True if any attempt succeeded, False
+        otherwise.
+
+        This is the key resilience fix: a single transient YouTube/SHRUTI/
+        network failure no longer kills the autoplay loop. The caller
+        should only fall through to 'Queue Has Ended' after this returns
+        False."""
+        if not popped:
+            return False
+        if not await is_autoplay_on(chat_id):
+            LOGGER(__name__).info(
+                f"[AUTOPLAY] autoplay is OFF for chat {chat_id} — not "
+                f"attempting autoplay_start"
+            )
+            return False
+
+        total = max_retries + 1
+        for attempt in range(total):
+            try:
+                LOGGER(__name__).info(
+                    f"[AUTOPLAY] attempt {attempt+1}/{total} for chat {chat_id} "
+                    f"(seed_vidid={popped.get('vidid')})"
+                )
+                started = await self.autoplay_start(
+                    chat_id,
+                    popped.get("chat_id", chat_id),
+                    popped.get("title"),
+                    popped.get("vidid"),
+                    client=client,
+                )
+                if started:
+                    LOGGER(__name__).info(
+                        f"[AUTOPLAY] attempt {attempt+1}/{total} succeeded "
+                        f"for chat {chat_id}"
+                    )
+                    return True
+                LOGGER(__name__).warning(
+                    f"[AUTOPLAY] attempt {attempt+1}/{total} returned False "
+                    f"for chat {chat_id}"
+                )
+            except Exception as e:
+                LOGGER(__name__).warning(
+                    f"[AUTOPLAY] attempt {attempt+1}/{total} raised for "
+                    f"chat {chat_id}: {type(e).__name__}: {e}"
+                )
+            if attempt < max_retries:
+                LOGGER(__name__).info(
+                    f"[AUTOPLAY] retrying in 5s for chat {chat_id}"
+                )
+                await asyncio.sleep(5)
+        LOGGER(__name__).warning(
+            f"[AUTOPLAY] all {total} attempts failed for chat {chat_id} "
+            f"— autoplay giving up"
+        )
+        return False
+
+    async def _handle_queue_ended(
+        self, chat_id: int, client: PyTgCalls
+    ):
+        """Send the 'Queue Has Ended' message and leave the voice call.
+        Only called when autoplay is OFF or all autoplay retries have
+        failed."""
+        await _clear_(chat_id)
+        try:
+            buttons = InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton(
+                            "✙ ʌᴅᴅ ϻє вᴧʙʏ ✙",
+                            url=f"https://t.me/{app.username}?startgroup=true",
+                        )
+                    ],
+                    [
+                        InlineKeyboardButton(
+                            "⋞ ᴄʟᴏsє ⋟", callback_data="close_message"
+                        ),
+                    ],
+                ]
+            )
+            await app.send_message(
+                chat_id,
+                """
+🎵 𝐓ʜᴇ 𝐌ᴜsɪᴄ 𝐐ᴜᴇᴜᴇ 𝐇𝴀s 𝐄ɴᴅᴇ𝐝.
+➤ 𝐔𝐬𝐞 /play 𝐓𝐨 𝐀𝴅ᴅ 𝐌ᴏʀ𝴇 𝐒ᴏɴɢs 🎶
+""",
+                reply_markup=buttons,
+            )
+        except Exception as e:
+            LOGGER(__name__).warning(
+                f"[AUTOPLAY] failed to send 'Queue Has Ended' message for "
+                f"chat {chat_id}: {type(e).__name__}: {e}"
+            )
+        try:
+            return await client.leave_call(chat_id, close=False)
+        except Exception as e:
+            LOGGER(__name__).warning(
+                f"[AUTOPLAY] leave_call failed for chat {chat_id}: "
+                f"{type(e).__name__}: {e}"
+            )
+            return None
+
     async def change_stream(self, client: PyTgCalls, chat_id: int):
+        """Called by PyTgCalls when the current track's audio stream ends.
+        Pops the finished track, then either plays the next queued track or
+        (if the queue is empty) starts autoplay / shows 'Queue Has Ended'.
+
+        Resilience fixes:
+          - Per-chat asyncio.Lock prevents concurrent change_stream calls
+            from racing on db[chat_id] mutations (e.g. PyTgCalls firing
+            StreamEnded twice, or a user clicking Skip at the exact moment
+            a track ends).
+          - When autoplay is ON, retries autoplay_start up to 2 times (3
+            total attempts) with a 5s delay before falling through to
+            'Queue Has Ended'. A single transient YouTube/SHRUTI/network
+            failure no longer kills the autoplay loop.
+          - All branches log through LOGGER so failures are diagnosable.
+        """
+        LOGGER(__name__).info(
+            f"[AUTOPLAY] change_stream (track finished) for chat {chat_id}"
+        )
         await delete_old_message(chat_id)
+
+        # Per-chat lock to prevent concurrent change_stream races.
+        lock = self._change_stream_locks.get(chat_id)
+        if lock is None:
+            lock = asyncio.Lock()
+            self._change_stream_locks[chat_id] = lock
+        async with lock:
+            await self._change_stream_inner(client, chat_id)
+
+    async def _change_stream_inner(self, client: PyTgCalls, chat_id: int):
         check = db.get(chat_id)
         popped = None
         loop = await get_loop(chat_id)
@@ -507,112 +690,34 @@ class Call(PyTgCalls):
                 await set_loop(chat_id, loop)
             await auto_clean(popped)
             if not check:
-                # Autoplay: if enabled for this chat, fetch a related track
-                # and start it instead of leaving the voice chat.
-                if popped and await is_autoplay_on(chat_id):
-                    try:
-                        started = await self.autoplay_start(
-                            chat_id,
-                            popped.get("chat_id", chat_id),
-                            popped.get("title"),
-                            popped.get("vidid"),
-                            client=client,
-                        )
-                        if started:
-                            return
-                        LOGGER(__name__).warning(
-                            f"[AUTOPLAY] autoplay_start returned False for "
-                            f"chat {chat_id} — falling back to leave_call"
-                        )
-                    except Exception as e:
-                        LOGGER(__name__).warning(
-                            f"[AUTOPLAY] autoplay_start raised in "
-                            f"change_stream (try-branch) for chat {chat_id}: "
-                            f"{type(e).__name__}: {e}"
-                        )
-                await _clear_(chat_id)
-                try:
-                    buttons = InlineKeyboardMarkup(
-                        [
-                            [
-                                                                InlineKeyboardButton(
-                                    "✙ ʌᴅᴅ ϻє вᴧʙʏ ✙", url=f"https://t.me/{app.username}?startgroup=true"
-                                )],
-                            [
-                                InlineKeyboardButton(
-                                    "⋞ ᴄʟᴏsє ⋟", callback_data="close_message"
-                                ),
-                            ]
-                        ]
-                    )
-                    await app.send_message(
-    chat_id,
-    """
-🎵 𝐓ʜᴇ 𝐌ᴜsɪᴄ 𝐐ᴜᴇᴜᴇ 𝐇ᴀ𝐬 𝐄ɴᴅᴇᴅ.
-➤ 𝐔𝐬𝐞 /play 𝐓𝐨 𝐀𝐝𝐝 𝐌𝐨𝐫𝐞 𝐒𝐨𝐧𝐠𝐬 🎶
-""",
-    reply_markup=buttons,
-)
-                except:
-                    pass
-                return await client.leave_call(chat_id, close=False)
+                # Queue is empty after popping. If autoplay is on, try to
+                # start a related track (with retries). Otherwise, show
+                # 'Queue Has Ended' and leave.
+                if await self._try_autoplay_with_retry(chat_id, popped, client):
+                    return
+                LOGGER(__name__).warning(
+                    f"[AUTOPLAY] autoplay failed or off for chat {chat_id} "
+                    f"— showing 'Queue Has Ended'"
+                )
+                return await self._handle_queue_ended(chat_id, client)
         except Exception as e:
             LOGGER(__name__).warning(
                 f"[AUTOPLAY] change_stream entered except-branch for chat "
                 f"{chat_id}: {type(e).__name__}: {e}"
             )
             try:
-                # Autoplay fallback in the except branch too — if the queue
-                # is empty but autoplay is on, try to start a related track
-                # before giving up and leaving the call.
-                if popped and await is_autoplay_on(chat_id):
-                    try:
-                        started = await self.autoplay_start(
-                            chat_id,
-                            popped.get("chat_id", chat_id),
-                            popped.get("title"),
-                            popped.get("vidid"),
-                            client=client,
-                        )
-                        if started:
-                            return
-                        LOGGER(__name__).warning(
-                            f"[AUTOPLAY] autoplay_start returned False in "
-                            f"except-branch for chat {chat_id}"
-                        )
-                    except Exception as e2:
-                        LOGGER(__name__).warning(
-                            f"[AUTOPLAY] autoplay_start raised in "
-                            f"change_stream (except-branch) for chat "
-                            f"{chat_id}: {type(e2).__name__}: {e2}"
-                        )
-                await _clear_(chat_id)
-                try:
-                    buttons = InlineKeyboardMarkup(
-                        [
-                            [
-                                                                InlineKeyboardButton(
-                                    "✙ ʌᴅᴅ ϻє вᴧʙʏ ✙", url=f"https://t.me/{app.username}?startgroup=true"
-                                )],
-                            [
-                                InlineKeyboardButton(
-                                    "⋞ ᴄʟᴏsє ⋟", callback_data="close_message"
-                                ),
-                            ]
-                        ]
-                    )
-                    await app.send_message(
-    chat_id,
-    """
-🎵 𝐓ʜᴇ 𝐌ᴜsɪᴄ 𝐐ᴜᴇᴜᴇ 𝐇ᴀ𝐬 𝐄ɴᴅᴇᴅ.
-➤ 𝐔𝐬𝐞 /play 𝐓𝐨 𝐀𝐝𝐝 𝐌𝐨𝐫𝐞 𝐒𝐨𝐧𝐠𝐬 🎶
-""",
-    reply_markup=buttons,
-)
-                except:
-                    pass
-                return await client.leave_call(chat_id, close=False)
-            except Exception:
+                if await self._try_autoplay_with_retry(chat_id, popped, client):
+                    return
+                LOGGER(__name__).warning(
+                    f"[AUTOPLAY] autoplay failed in except-branch for chat "
+                    f"{chat_id} — showing 'Queue Has Ended'"
+                )
+                return await self._handle_queue_ended(chat_id, client)
+            except Exception as e2:
+                LOGGER(__name__).error(
+                    f"[AUTOPLAY] change_stream fatal error in except-branch "
+                    f"for chat {chat_id}: {type(e2).__name__}: {e2}"
+                )
                 return
         queued = check[0]["file"]
         language = await get_lang(chat_id)
@@ -819,7 +924,14 @@ class Call(PyTgCalls):
             async def _update_handler(_, update: types.Update, _client=client):
                 if isinstance(update, types.StreamEnded):
                     if update.stream_type == types.StreamEnded.Type.AUDIO:
-                        await self.change_stream(_client, update.chat_id)
+                        try:
+                            await self.change_stream(_client, update.chat_id)
+                        except Exception as e:
+                            LOGGER(__name__).error(
+                                f"[AUTOPLAY] change_stream raised in "
+                                f"StreamEnded handler for chat "
+                                f"{update.chat_id}: {type(e).__name__}: {e}"
+                            )
                 elif isinstance(update, types.ChatUpdate):
                     if update.status in [
                         types.ChatUpdate.Status.KICKED,

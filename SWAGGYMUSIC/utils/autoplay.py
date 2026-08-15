@@ -11,9 +11,14 @@ Resilience (added to fix the "autoplay suddenly stops" bug):
     logs instead of being silently printed to stdout and lost.
   - Mix extraction is retried once on failure (transient YouTube/network
     errors are common).
-  - When downloading a candidate, if the first candidate's download fails,
-    we try the next candidate from the list (up to _MAX_DOWNLOAD_ATTEMPTS)
-    before giving up. This way a single bad video ID doesn't kill autoplay.
+  - The caller (Swaggy.autoplay_start in core/call.py) now tries EVERY
+    candidate in the returned list (not just the first 3), and if a
+    candidate's download OR play call fails it undoes the queue insertion
+    and moves on to the next candidate. Only NoActiveGroupCall (voice
+    chat genuinely gone) aborts the whole step.
+  - On top of that, Swaggy._try_autoplay_with_retry wraps autoplay_start
+    with up to 3 total attempts (2 retries, 5s apart) so a transient
+    YouTube/SHRUTI/network failure no longer kills the autoplay loop.
   - There is NO hard cap on the number of autoplay tracks per chat. The
     only constant (_HISTORY_LIMIT) is a per-chat dedup history, not a play
     counter; it auto-resets when all candidates are exhausted.
@@ -30,10 +35,9 @@ from py_yt import VideosSearch
 from SWAGGYMUSIC.logging import LOGGER
 
 _HISTORY_LIMIT = 50
-# How many candidate tracks to try downloading before giving up on this
-# autoplay step. A small number — if 3 different video IDs all fail to
-# download, something is genuinely wrong (YouTube block, network outage,
-# SHRUTI API down) and we should let the queue end rather than spin.
+# Note: the actual download-attempt cap is now in core/call.py's
+# autoplay_start, which iterates over ALL candidates returned here.
+# This constant is kept for backward compatibility / documentation only.
 _MAX_DOWNLOAD_ATTEMPTS = 3
 
 _played_history: dict[int, list[str]] = {}

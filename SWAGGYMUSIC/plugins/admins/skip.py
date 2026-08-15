@@ -42,26 +42,14 @@ async def skip(cli, message: Message, _, chat_id):
                             if not check:
                                 # Autoplay: try to start a related track
                                 # before giving up and stopping playback.
+                                # Uses the same retry helper as natural
+                                # song-end so a transient YouTube/SHRUTI/
+                                # network failure doesn't kill autoplay.
                                 if popped and await is_autoplay_on(chat_id):
-                                    try:
-                                        started = await Swaggy.autoplay_start(
-                                            chat_id,
-                                            popped.get("chat_id", chat_id),
-                                            popped.get("title"),
-                                            popped.get("vidid"),
-                                        )
-                                        if started:
-                                            return
-                                        LOGGER(__name__).warning(
-                                            f"[AUTOPLAY] skip batch: autoplay_start "
-                                            f"returned False for chat {chat_id}"
-                                        )
-                                    except Exception as e:
-                                        LOGGER(__name__).warning(
-                                            f"[AUTOPLAY] skip batch: autoplay_start "
-                                            f"raised for chat {chat_id}: "
-                                            f"{type(e).__name__}: {e}"
-                                        )
+                                    if await Swaggy._try_autoplay_with_retry(
+                                        chat_id, popped, None
+                                    ):
+                                        return
                                 try:
                                     await message.reply_text(
                                         text=_["admin_6"].format(
@@ -91,26 +79,12 @@ async def skip(cli, message: Message, _, chat_id):
                 await auto_clean(popped)
             if not check:
                 # Autoplay: try to start a related track before stopping.
+                # Uses the same retry helper as natural song-end.
                 if popped and await is_autoplay_on(chat_id):
-                    try:
-                        started = await Swaggy.autoplay_start(
-                            chat_id,
-                            popped.get("chat_id", chat_id),
-                            popped.get("title"),
-                            popped.get("vidid"),
-                        )
-                        if started:
-                            return
-                        LOGGER(__name__).warning(
-                            f"[AUTOPLAY] skip single: autoplay_start "
-                            f"returned False for chat {chat_id}"
-                        )
-                    except Exception as e:
-                        LOGGER(__name__).warning(
-                            f"[AUTOPLAY] skip single: autoplay_start "
-                            f"raised for chat {chat_id}: "
-                            f"{type(e).__name__}: {e}"
-                        )
+                    if await Swaggy._try_autoplay_with_retry(
+                        chat_id, popped, None
+                    ):
+                        return
                 await message.reply_text(
                     text=_["admin_6"].format(
                         message.from_user.mention, message.chat.title
@@ -125,25 +99,10 @@ async def skip(cli, message: Message, _, chat_id):
             try:
                 # Autoplay fallback in the except branch too.
                 if popped and await is_autoplay_on(chat_id):
-                    try:
-                        started = await Swaggy.autoplay_start(
-                            chat_id,
-                            popped.get("chat_id", chat_id),
-                            popped.get("title"),
-                            popped.get("vidid"),
-                        )
-                        if started:
-                            return
-                        LOGGER(__name__).warning(
-                            f"[AUTOPLAY] skip except: autoplay_start "
-                            f"returned False for chat {chat_id}"
-                        )
-                    except Exception as e:
-                        LOGGER(__name__).warning(
-                            f"[AUTOPLAY] skip except: autoplay_start "
-                            f"raised for chat {chat_id}: "
-                            f"{type(e).__name__}: {e}"
-                        )
+                    if await Swaggy._try_autoplay_with_retry(
+                        chat_id, popped, None
+                    ):
+                        return
                 await message.reply_text(
                     text=_["admin_6"].format(
                         message.from_user.mention, message.chat.title

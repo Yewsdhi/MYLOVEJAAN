@@ -216,28 +216,15 @@ async def del_back_playlist(client, CallbackQuery, _):
                     await auto_clean(popped)
                 if not check:
                     # Autoplay: try to start a related track before
-                    # stopping playback.
+                    # stopping playback. Uses the same retry helper as
+                    # natural song-end so a transient failure doesn't
+                    # kill autoplay.
                     if popped and await is_autoplay_on(chat_id):
-                        try:
-                            started = await Swaggy.autoplay_start(
-                                chat_id,
-                                popped.get("chat_id", chat_id),
-                                popped.get("title"),
-                                popped.get("vidid"),
-                            )
-                            if started:
-                                await CallbackQuery.edit_message_text(txt, reply_markup=close_markup(_))
-                                return
-                            LOGGER(__name__).warning(
-                                f"[AUTOPLAY] callback Skip: autoplay_start "
-                                f"returned False for chat {chat_id}"
-                            )
-                        except Exception as e:
-                            LOGGER(__name__).warning(
-                                f"[AUTOPLAY] callback Skip: autoplay_start "
-                                f"raised for chat {chat_id}: "
-                                f"{type(e).__name__}: {e}"
-                            )
+                        if await Swaggy._try_autoplay_with_retry(
+                            chat_id, popped, None
+                        ):
+                            await CallbackQuery.edit_message_text(txt, reply_markup=close_markup(_))
+                            return
                     await CallbackQuery.edit_message_text(
                         f"➻ sᴛʀᴇᴀᴍ sᴋɪᴩᴩᴇᴅ 🎄\n│ \n└ʙʏ : {mention} 🥀"
                     )
@@ -255,26 +242,11 @@ async def del_back_playlist(client, CallbackQuery, _):
                 try:
                     # Autoplay fallback in the except branch too.
                     if popped and await is_autoplay_on(chat_id):
-                        try:
-                            started = await Swaggy.autoplay_start(
-                                chat_id,
-                                popped.get("chat_id", chat_id),
-                                popped.get("title"),
-                                popped.get("vidid"),
-                            )
-                            if started:
-                                await CallbackQuery.edit_message_text(txt, reply_markup=close_markup(_))
-                                return
-                            LOGGER(__name__).warning(
-                                f"[AUTOPLAY] callback Skip except: "
-                                f"autoplay_start returned False for chat {chat_id}"
-                            )
-                        except Exception as e:
-                            LOGGER(__name__).warning(
-                                f"[AUTOPLAY] callback Skip except: "
-                                f"autoplay_start raised for chat {chat_id}: "
-                                f"{type(e).__name__}: {e}"
-                            )
+                        if await Swaggy._try_autoplay_with_retry(
+                            chat_id, popped, None
+                        ):
+                            await CallbackQuery.edit_message_text(txt, reply_markup=close_markup(_))
+                            return
                     await CallbackQuery.edit_message_text(
                         f"➻ sᴛʀᴇᴀᴍ sᴋɪᴩᴩᴇᴅ 🎄\n│ \n└ʙʏ : {mention} 🥀"
                     )
