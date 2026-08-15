@@ -1,3 +1,4 @@
+import asyncio
 import os
 from random import randint
 from typing import Union
@@ -8,7 +9,7 @@ import config
 from SWAGGYMUSIC import Carbon, YouTube, app
 from SWAGGYMUSIC.core.call import Swaggy
 from SWAGGYMUSIC.misc import db
-from SWAGGYMUSIC.utils.database import add_active_video_chat, is_active_chat
+from SWAGGYMUSIC.utils.database import add_active_video_chat, is_active_chat, is_autoplay_on
 from SWAGGYMUSIC.utils.exceptions import AssistantErr
 from SWAGGYMUSIC.utils.inline import aq_markup, close_markup, stream_markup
 from SWAGGYMUSIC.utils.pastebin import SwaggyBin
@@ -99,7 +100,7 @@ async def stream(
                     forceplay=forceplay,
                 )
                 img = await get_thumb(vidid)
-                button = stream_markup(_, chat_id)
+                button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
                 run = await app.send_photo(
                     original_chat_id,
                     photo=img,
@@ -138,11 +139,16 @@ async def stream(
         duration_min = result["duration_min"]
         thumbnail = result["thumb"]
         status = True if video else None
+        # Start thumbnail generation in parallel with download — get_thumb
+        # does its own VideosSearch + HTTP download + PIL processing (3-10s),
+        # so overlapping it with the audio download saves that entire time.
+        thumb_task = asyncio.create_task(get_thumb(vidid))
         try:
             file_path, direct = await YouTube.download(
                 vidid, mystic, videoid=True, video=status
             )
         except:
+            thumb_task.cancel()
             raise AssistantErr(_["play_14"])
         if await is_active_chat(chat_id):
             await put_queue(
@@ -163,6 +169,8 @@ async def stream(
                 text=_["queue_4"].format(position, title[:27], duration_min, user_name),
                 reply_markup=InlineKeyboardMarkup(button),
             )
+            # Cancel the thumbnail task since we don't need it for queued items
+            thumb_task.cancel()
         else:
             if not forceplay:
                 db[chat_id] = []
@@ -185,8 +193,13 @@ async def stream(
                 "video" if video else "audio",
                 forceplay=forceplay,
             )
-            img = await get_thumb(vidid)
-            button = stream_markup(_, chat_id)
+            # Thumbnail should be ready by now (it was generating in parallel
+            # with the download). If not, this await waits for the remainder.
+            try:
+                img = await thumb_task
+            except Exception:
+                img = thumbnail
+            button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
             run = await app.send_photo(
                 original_chat_id,
                 photo=img,
@@ -240,7 +253,7 @@ async def stream(
                 "audio",
                 forceplay=forceplay,
             )
-            button = stream_markup(_, chat_id)
+            button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
             run = await app.send_photo(
                 original_chat_id,
                 photo=config.SOUNCLOUD_IMG_URL,
@@ -295,7 +308,7 @@ async def stream(
             )
             if video:
                 await add_active_video_chat(chat_id)
-            button = stream_markup(_, chat_id)
+            button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
             run = await app.send_photo(
                 original_chat_id,
                 has_spoiler=True,
@@ -357,7 +370,7 @@ async def stream(
                 forceplay=forceplay,
             )
             img = await get_thumb(vidid)
-            button = stream_markup(_, chat_id)
+            button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
             run = await app.send_photo(
                 original_chat_id,
                 photo=img,
@@ -413,7 +426,7 @@ async def stream(
                 "video" if video else "audio",
                 forceplay=forceplay,
             )
-            button = stream_markup(_, chat_id)
+            button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
             run = await app.send_photo(
                 original_chat_id,
                 photo=config.STREAM_IMG_URL,

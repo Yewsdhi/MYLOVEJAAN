@@ -28,7 +28,22 @@ def track_markup(_, videoid, user_id, channel, fplay):
     return buttons
 
 
-def stream_markup_timer(_, chat_id, played, dur):
+def _autoplay_button(chat_id, autoplay_status=None):
+    """Build the AutoPlay toggle button with optional ON/OFF status text.
+    If autoplay_status is None, shows just '📩 ᴀᴜᴛᴏᴘʟᴀʏ' (backward compatible)."""
+    if autoplay_status is True:
+        text = "📩 ᴀᴜᴛᴏᴘʟᴀʏ: ᴏɴ 🟢"
+    elif autoplay_status is False:
+        text = "📩 ᴀᴜᴛᴏᴘʟᴀʏ: ᴏꜰꜰ 🔴"
+    else:
+        text = "📩 ᴀᴜᴛᴏᴘʟᴀʏ"
+    return InlineKeyboardButton(
+        text=text,
+        callback_data=f"ADMIN AutoPlay|{chat_id}",
+    )
+
+
+def stream_markup_timer(_, chat_id, played, dur, autoplay_status=None):
     played_sec = time_to_seconds(played)
     duration_sec = time_to_seconds(dur)
     percentage = (played_sec / duration_sec) * 100
@@ -69,12 +84,15 @@ def stream_markup_timer(_, chat_id, played, dur):
             InlineKeyboardButton(text="‣‣I", callback_data=f"ADMIN Skip|{chat_id}"),
             InlineKeyboardButton(text="▢", callback_data=f"ADMIN Stop|{chat_id}"),
         ],
+        [
+            _autoplay_button(chat_id, autoplay_status),
+        ],
         [InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close")],
     ]
     return buttons
 
 
-def stream_markup(_, chat_id):
+def stream_markup(_, chat_id, autoplay_status=None):
     buttons = [
         [
             InlineKeyboardButton(text="▷", callback_data=f"ADMIN Resume|{chat_id}"),
@@ -84,10 +102,7 @@ def stream_markup(_, chat_id):
             InlineKeyboardButton(text="▢", callback_data=f"ADMIN Stop|{chat_id}"),
         ],
         [
-            InlineKeyboardButton(
-                text="📩 ᴧυᴛσᴘʟᴧʏ",
-                callback_data=f"ADMIN AutoPlay|{chat_id}",
-            ),
+            _autoplay_button(chat_id, autoplay_status),
         ],
         [InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close")],
     ]

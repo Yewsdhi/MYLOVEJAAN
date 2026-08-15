@@ -184,18 +184,21 @@ async def del_back_playlist(client, CallbackQuery, _):
         # source of truth as /autoplay command and natural song-end).
         if await is_autoplay_on(chat_id):
             await autoplay_off(chat_id)
-            await CallbackQuery.answer("🔴 ᴧυᴛσᴘʟᴧʏ ᴅɪsᴧʙʟєᴅ!", show_alert=True)
-            await CallbackQuery.message.reply_text(
-                f"<blockquote><b>🔴 🎧 ᴧυᴛσᴘʟᴧʏ sʏsᴛєϻ</b>\n\n<b>ᴧυᴛσᴘʟᴧʏ ғσʀ ᴛʜɪs ɢʀσυᴘ ɪs ησᴡ ᴅɪsᴧʙʟєᴅ 🔴.</b>\n└ <b>ʙʏ :</b> {mention}</blockquote>",
-                reply_markup=close_markup(_),
-            )
+            await CallbackQuery.answer("🔴 ᴀᴜᴛᴏᴘʟᴀʏ ᴅɪsᴀʙʟᴇᴅ!", show_alert=True)
         else:
             await autoplay_on(chat_id)
-            await CallbackQuery.answer("🟢 ᴧυᴛσᴘʟᴧʏ єηᴧʙʟєᴅ!", show_alert=True)
-            await CallbackQuery.message.reply_text(
-                f"<blockquote><b>🟢 🎧 ᴧυᴛσᴘʟᴧʏ sʏsᴛєϻ</b>\n\n<b>ᴧυᴛσᴘʟᴧʏ ғσʀ ᴛʜɪs ɢʀσυᴘ ɪs ησᴡ єηᴧʙʟєᴅ 🟢.</b>\n└ <b>ʙʏ :</b> {mention}</blockquote>",
-                reply_markup=close_markup(_),
+            await CallbackQuery.answer("🟢 ᴀᴜᴛᴏᴘʟᴀʏ ᴇɴᴀʙʟᴇᴅ!", show_alert=True)
+        # Immediately update the button text to reflect the new status,
+        # so the user sees ON/OFF without waiting for markup_timer refresh.
+        try:
+            new_status = await is_autoplay_on(chat_id)
+            await CallbackQuery.edit_message_reply_markup(
+                reply_markup=InlineKeyboardMarkup(
+                    stream_markup(_, chat_id, autoplay_status=new_status)
+                )
             )
+        except Exception:
+            pass
     elif command == "Skip" or command == "Replay":
         check = db.get(chat_id)
         if command == "Skip":
@@ -294,7 +297,7 @@ async def del_back_playlist(client, CallbackQuery, _):
                 await Swaggy.skip_stream(chat_id, link, video=status, image=image)
             except:
                 return await CallbackQuery.message.reply_text(_["call_6"])
-            button = stream_markup(_, chat_id)
+            button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
             img = await get_thumb(videoid)
             run = await CallbackQuery.message.reply_photo(
                 photo=img,
@@ -330,7 +333,7 @@ async def del_back_playlist(client, CallbackQuery, _):
                 await Swaggy.skip_stream(chat_id, file_path, video=status, image=image)
             except:
                 return await mystic.edit_text(_["call_6"])
-            button = stream_markup(_, chat_id)
+            button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
             img = await get_thumb(videoid)
             run = await CallbackQuery.message.reply_photo(
                 photo=img,
@@ -351,7 +354,7 @@ async def del_back_playlist(client, CallbackQuery, _):
                 await Swaggy.skip_stream(chat_id, videoid, video=status)
             except:
                 return await CallbackQuery.message.reply_text(_["call_6"])
-            button = stream_markup(_, chat_id)
+            button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
             run = await CallbackQuery.message.reply_photo(
                 photo=STREAM_IMG_URL,
                 caption=_["stream_2"].format(user),
@@ -375,7 +378,7 @@ async def del_back_playlist(client, CallbackQuery, _):
             except:
                 return await CallbackQuery.message.reply_text(_["call_6"])
             if videoid == "telegram":
-                button = stream_markup(_, chat_id)
+                button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
                 run = await CallbackQuery.message.reply_photo(
                     photo=TELEGRAM_AUDIO_URL
                     if str(streamtype) == "audio"
@@ -388,7 +391,7 @@ async def del_back_playlist(client, CallbackQuery, _):
                 db[chat_id][0]["mystic"] = run
                 db[chat_id][0]["markup"] = "tg"
             elif videoid == "soundcloud":
-                button = stream_markup(_, chat_id)
+                button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
                 run = await CallbackQuery.message.reply_photo(
                     photo=SOUNCLOUD_IMG_URL
                     if str(streamtype) == "audio"
@@ -401,7 +404,7 @@ async def del_back_playlist(client, CallbackQuery, _):
                 db[chat_id][0]["mystic"] = run
                 db[chat_id][0]["markup"] = "tg"
             else:
-                button = stream_markup(_, chat_id)
+                button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
                 img = await get_thumb(videoid)
                 run = await CallbackQuery.message.reply_photo(
                     photo=img,
@@ -447,11 +450,13 @@ async def markup_timer():
                 except:
                     _ = get_string("en")
                 try:
+                    ap_status = await is_autoplay_on(chat_id)
                     buttons = stream_markup_timer(
                         _,
                         chat_id,
                         seconds_to_min(playing[0]["played"]),
                         playing[0]["dur"],
+                        autoplay_status=ap_status,
                     )
                     await mystic.edit_reply_markup(
                         reply_markup=InlineKeyboardMarkup(buttons)
