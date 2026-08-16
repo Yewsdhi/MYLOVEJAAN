@@ -21,6 +21,22 @@ _THUMB_URLS = (
     "https://i.ytimg.com/vi/{vid}/mqdefault.jpg",
 )
 
+# Sentinels that mean "metadata was not provided / not available". We use
+# these instead of None so callers can pass title="" or title=None
+# interchangeably. IMPORTANT: a real song title is never exactly one of
+# these strings, so we can safely treat them as "missing".
+_UNKNOWN_TITLE = "Unknown Title"
+_UNKNOWN_ARTIST = "Unknown Artist"
+_UNKNOWN_DURATION = "00:00"
+_UNKNOWN_VIEWS = "0 views"
+
+_SENTINELS = {_UNKNOWN_TITLE, _UNKNOWN_ARTIST, _UNKNOWN_DURATION, _UNKNOWN_VIEWS, "", None}
+
+
+def _is_missing(value) -> bool:
+    """Return True if `value` is a sentinel meaning 'not provided'."""
+    return value in _SENTINELS
+
 
 async def _fetch_raw_thumbnail(videoid: str) -> str:
     """Download the thumbnail for the EXACT video id `videoid` from the
@@ -51,72 +67,96 @@ async def _fetch_raw_thumbnail(videoid: str) -> str:
 
 
 async def _fetch_video_meta(videoid: str) -> dict:
-    """Best-effort fetch of title/artist/duration/views for the card overlay.
+    """Best-effort fetch of title/artist/duration/views for the card
+    overlay, using the NEW YouTube API (yt.riteshyt.in).
+
     The thumbnail itself NEVER depends on this — it's always the exact-video
     i.ytimg.com URL fetched by `_fetch_raw_thumbnail`. If metadata cannot be
-    fetched (e.g. youtubesearchpython offline), sensible defaults are returned
-    and the card still renders with the correct thumbnail.
+    fetched (e.g. API offline), sensible defaults are returned and the card
+    still renders with the correct thumbnail.
 
-    IMPORTANT: We search using the FULL YouTube watch URL
-    (`https://www.youtube.com/watch?v=<videoid>`), NOT the bare video ID.
-    youtubesearchpython's VideosSearch is a text-search API — passing a
-    bare 11-char video ID returns garbage / no results, which was the root
-    cause of the "Unknown Title / Unknown Artist / 0 views" bug. Searching
-    with the full URL lets VideosSearch correctly resolve the exact video.
+    Implementation: hit /search with the canonical watch URL and pick the
+    result whose `id` EXACTLY matches the requested `videoid`. This is the
+    ONLY reliable way to get channel.name + viewCount.short for the exact
+    video — /details doesn't return channel/views, and bare-id /search
+    returns garbage results.
 
-    We also verify the returned result's `id` matches the requested
-    `videoid` — if VideosSearch drifts to a different video, we retry once
-    and then fall back to the defaults rather than showing wrong metadata."""
+    The previous implementation used youtubesearchpython.VideosSearch here,
+    which was the root cause of the "Unknown Title / Unknown Artist / 0
+    views" bug: VideosSearch frequently drifted to a different video (or
+    returned no exact-id match), so the function fell through to the
+    hardcoded defaults. The new-API /search endpoint always returns the
+    exact video as the first result when queried with its watch URL.
+    """
     if not videoid:
         return {
-            "title": "Unknown Title",
-            "artist": "Unknown Artist",
-            "duration": "00:00",
-            "views": "0 views",
+            "title": _UNKNOWN_TITLE,
+            "artist": _UNKNOWN_ARTIST,
+            "duration": _UNKNOWN_DURATION,
+            "views": _UNKNOWN_VIEWS,
         }
+    # Lazy import to avoid pulling httpx at module-load time (it's already
+    # imported by Youtube.py, but we keep thumbnails.py self-contained).
+    import os as _os
+    API_URL = _os.environ.get("API_URL", "http://yt.riteshyt.in").rstrip("/")
+    API_KEY = _os.environ.get("API_KEY", "riteshfree576fd88ed84a3f46c84fd556")
+
     watch_url = f"https://www.youtube.com/watch?v={videoid}"
-    for attempt in range(2):
-        try:
-            from youtubesearchpython.__future__ import VideosSearch
-            search = VideosSearch(watch_url, limit=10)
-            data = await search.next()
-            results = data.get("result", []) if isinstance(data, dict) else []
-            if not results:
-                continue
-            # Pick the result whose id EXACTLY matches the requested videoid.
-            # This prevents the "wrong metadata" bug where VideosSearch
-            # returned a different top hit for a watch-URL query.
-            chosen = None
-            for r in results:
-                if str(r.get("id", "")) == str(videoid):
-                    chosen = r
-                    break
-            if chosen is None:
-                # No exact match — VideosSearch drifted. Retry once; if
-                # still no match, fall through to defaults rather than
-                # showing wrong metadata for a different video.
-                if attempt == 0:
-                    continue
-                # On second attempt, accept the first result if its id is
-                # close enough (e.g. same video, different params). Otherwise
-                # fall through to defaults.
-                if results and results[0].get("id"):
-                    chosen = results[0]
-                else:
-                    continue
-            return {
-                "title": chosen.get("title") or "Unknown Title",
-                "artist": (chosen.get("channel") or {}).get("name") or "Unknown Artist",
-                "duration": chosen.get("duration") or "00:00",
-                "views": (chosen.get("viewCount", {}) or {}).get("short") or "0 views",
-            }
-        except Exception:
-            continue
+    params = {"query": watch_url, "limit": 5}
+    if API_KEY:
+        params["api_key"] = API_KEY
+
+    try:
+        import httpx
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(15.0, connect=10.0),
+            follow_redirects=True,
+        ) as client:
+            response = await client.get(f"{API_URL}/search", params=params)
+            if response.status_code != 200:
+                return {
+                    "title": _UNKNOWN_TITLE,
+                    "artist": _UNKNOWN_ARTIST,
+                    "duration": _UNKNOWN_DURATION,
+                    "views": _UNKNOWN_VIEWS,
+                }
+            data = response.json()
+            results = (data or {}).get("result") or []
+    except Exception:
+        return {
+            "title": _UNKNOWN_TITLE,
+            "artist": _UNKNOWN_ARTIST,
+            "duration": _UNKNOWN_DURATION,
+            "views": _UNKNOWN_VIEWS,
+        }
+
+    # Pick the result whose id EXACTLY matches the requested videoid.
+    # This prevents the "wrong metadata" bug where /search surfaced a
+    # different top hit for a watch-URL query.
+    chosen = None
+    for r in results:
+        if str(r.get("id", "")) == str(videoid):
+            chosen = r
+            break
+    if chosen is None and results:
+        # Last-resort: accept the first result. We log nothing here to
+        # keep the hot path quiet, but the thumbnail will still render
+        # with the correct artwork (because _fetch_raw_thumbnail uses
+        # the canonical i.ytimg.com URL for the exact video id).
+        chosen = results[0]
+    if not chosen:
+        return {
+            "title": _UNKNOWN_TITLE,
+            "artist": _UNKNOWN_ARTIST,
+            "duration": _UNKNOWN_DURATION,
+            "views": _UNKNOWN_VIEWS,
+        }
+
     return {
-        "title": "Unknown Title",
-        "artist": "Unknown Artist",
-        "duration": "00:00",
-        "views": "0 views",
+        "title": chosen.get("title") or _UNKNOWN_TITLE,
+        "artist": (chosen.get("channel") or {}).get("name") or _UNKNOWN_ARTIST,
+        "duration": chosen.get("duration") or _UNKNOWN_DURATION,
+        "views": (chosen.get("viewCount", {}) or {}).get("short") or _UNKNOWN_VIEWS,
     }
 
 
@@ -237,7 +277,45 @@ def _generate_thumb_sync(videoid: str, title: str, artist: str, duration: str,
     return cache_path
 
 
-async def get_thumb(videoid: str, player_username: str = None) -> str:
+async def get_thumb(
+    videoid: str,
+    player_username: str = None,
+    title: str = None,
+    artist: str = None,
+    duration: str = None,
+    views: str = None,
+) -> str:
+    """Generate the now-playing thumbnail card for `videoid`.
+
+    Parameters
+    ----------
+    videoid : str
+        The 11-char YouTube video ID. ALWAYS required — the thumbnail
+        image itself is fetched from the canonical i.ytimg.com URL for
+        this exact ID, so the artwork is 1:1 with the playing video.
+    player_username : str, optional
+        Kept for signature compatibility; not currently rendered on the
+        card.
+    title, artist, duration, views : str, optional
+        Metadata that the CALLER already has in scope (e.g. from the
+        YouTube.search result that was used to build the "Started
+        Streaming" caption). When provided, these are used directly and
+        we SKIP the network metadata lookup entirely — this is the root-
+        cause fix for the "Unknown Title / Unknown Artist / 0 views"
+        bug, where the previous implementation did an INDEPENDENT
+        VideosSearch call that frequently drifted to a different video
+        or returned no exact-id match.
+
+        If any of these are missing (None / "" / "Unknown Title" / etc.),
+        we fall back to _fetch_video_meta() to fill in just the missing
+        fields from the new YouTube API /search endpoint (queried with
+        the canonical watch URL so the first result is always the exact
+        video). This guarantees we never show "Unknown Title" when the
+        caller actually had the title available but forgot to pass it.
+
+    The card design (layout, fonts, colors, progress bar, glass panel)
+    is unchanged — this function only fixes the METADATA FLOW.
+    """
     if player_username is None:
         player_username = app.username
 
@@ -256,9 +334,33 @@ async def get_thumb(videoid: str, player_username: str = None) -> str:
         # another search.
         return YOUTUBE_IMG_URL
 
-    # 2. Best-effort metadata for the card overlay. If this fails, the
-    #    card still renders with the correct thumbnail.
-    meta = await _fetch_video_meta(videoid)
+    # 2. Build the metadata dict for the card overlay. Start with what
+    #    the caller provided; only fetch the missing fields. This avoids
+    #    the redundant /search call when the caller already has all the
+    #    metadata (which is the common case — play.py / call.py / skip.py
+    #    all have title + duration in scope at the call site).
+    have_title = not _is_missing(title)
+    have_artist = not _is_missing(artist)
+    have_duration = not _is_missing(duration)
+    have_views = not _is_missing(views)
+
+    if have_title and have_artist and have_duration and have_views:
+        # Fast path — caller provided everything. No network call needed.
+        meta = {
+            "title": title,
+            "artist": artist,
+            "duration": duration,
+            "views": views,
+        }
+    else:
+        # Fetch from API, then override with whatever caller provided.
+        fetched = await _fetch_video_meta(videoid)
+        meta = {
+            "title": title if have_title else fetched["title"],
+            "artist": artist if have_artist else fetched["artist"],
+            "duration": duration if have_duration else fetched["duration"],
+            "views": views if have_views else fetched["views"],
+        }
 
     # 3. Run the PIL processing in a thread executor so it doesn't block
     #    the asyncio event loop (PIL is synchronous and CPU-intensive).

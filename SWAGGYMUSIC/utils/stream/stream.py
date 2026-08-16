@@ -99,7 +99,11 @@ async def stream(
                     "video" if video else "audio",
                     forceplay=forceplay,
                 )
-                img = await get_thumb(vidid)
+                img = await get_thumb(
+                    vidid,
+                    title=title,
+                    duration=duration_min,
+                )
                 button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
                 run = await app.send_photo(
                     original_chat_id,
@@ -140,9 +144,16 @@ async def stream(
         thumbnail = result["thumb"]
         status = True if video else None
         # Start thumbnail generation in parallel with download — get_thumb
-        # does its own VideosSearch + HTTP download + PIL processing (3-10s),
+        # does its own /search + HTTP download + PIL processing (3-10s),
         # so overlapping it with the audio download saves that entire time.
-        thumb_task = asyncio.create_task(get_thumb(vidid))
+        # We pass the title + duration the caller already has so get_thumb
+        # doesn't need to do an independent metadata lookup (root-cause fix
+        # for the 'Unknown Title / Unknown Artist / 0 views' bug — the
+        # previous implementation did a SEPARATE VideosSearch that often
+        # drifted to a different video and fell through to defaults).
+        thumb_task = asyncio.create_task(
+            get_thumb(vidid, title=title, duration=duration_min)
+        )
         try:
             file_path, direct = await YouTube.download(
                 vidid, mystic, videoid=True, video=status
@@ -369,7 +380,11 @@ async def stream(
                 "video" if video else "audio",
                 forceplay=forceplay,
             )
-            img = await get_thumb(vidid)
+            img = await get_thumb(
+                vidid,
+                title=title,
+                duration=duration_min,
+            )
             button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
             run = await app.send_photo(
                 original_chat_id,

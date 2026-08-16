@@ -500,7 +500,11 @@ class Call(PyTgCalls):
         duration_min = track["duration_min"]
 
         try:
-            img = await get_thumb(track["vidid"])
+            img = await get_thumb(
+                track["vidid"],
+                title=title,
+                duration=duration_min,
+            )
             button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
             run = await app.send_photo(
                 chat_id=original_chat_id,
@@ -750,7 +754,11 @@ class Call(PyTgCalls):
                     original_chat_id,
                     text=_["call_6"],
                 )
-            img = await get_thumb(videoid)
+            img = await get_thumb(
+                videoid,
+                title=title,
+                duration=check[0]["dur"],
+            )
             button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
             run = await app.send_photo(
                 chat_id=original_chat_id,
@@ -825,7 +833,11 @@ class Call(PyTgCalls):
                     if await self._try_autoplay_with_retry(chat_id, popped, client):
                         return
                 return await self._handle_queue_ended(chat_id, client)
-            img = await get_thumb(videoid)
+            img = await get_thumb(
+                videoid,
+                title=title,
+                duration=check[0]["dur"],
+            )
             button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
             await mystic.delete()
             run = await app.send_photo(
@@ -900,7 +912,11 @@ class Call(PyTgCalls):
                 db[chat_id][0]["mystic"] = run
                 db[chat_id][0]["markup"] = "tg"
             else:
-                img = await get_thumb(videoid)
+                img = await get_thumb(
+                    videoid,
+                    title=title,
+                    duration=check[0]["dur"],
+                )
                 button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
                 run = await app.send_photo(
                     chat_id=original_chat_id,

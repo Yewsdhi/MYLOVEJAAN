@@ -138,7 +138,11 @@ async def skip(cli, message: Message, _, chat_id):
         except:
             return await message.reply_text(_["call_6"])
         button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
-        img = await get_thumb(videoid)
+        img = await get_thumb(
+            videoid,
+            title=title,
+            duration=check[0]["dur"],
+        )
         run = await message.reply_photo(
             photo=img,
             caption=_["stream_1"].format(
@@ -171,7 +175,11 @@ async def skip(cli, message: Message, _, chat_id):
         except:
             return await mystic.edit_text(_["call_6"])
         button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
-        img = await get_thumb(videoid)
+        img = await get_thumb(
+            videoid,
+            title=title,
+            duration=check[0]["dur"],
+        )
         run = await message.reply_photo(
             photo=img,
             has_spoiler=True,
@@ -244,7 +252,11 @@ async def skip(cli, message: Message, _, chat_id):
             db[chat_id][0]["markup"] = "tg"
         else:
             button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
-            img = await get_thumb(videoid)
+            img = await get_thumb(
+                videoid,
+                title=title,
+                duration=check[0]["dur"],
+            )
             run = await message.reply_photo(
                 photo=img,
                 has_spoiler=True,
