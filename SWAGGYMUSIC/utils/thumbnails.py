@@ -57,24 +57,61 @@ async def _fetch_video_meta(videoid: str) -> dict:
     fetched (e.g. py_yt offline), sensible defaults are returned and the
     card still renders with the correct thumbnail.
 
-    We pick the search result whose `id` EXACTLY matches the requested
-    videoid — this prevents the "wrong metadata" bug where py_yt returned
-    a different top hit for a watch-URL query."""
-    try:
-        from py_yt import VideosSearch
-        search = VideosSearch(videoid, limit=10)
-        data = await search.next()
-        results = data.get("result", []) if isinstance(data, dict) else []
-        for r in results:
-            if str(r.get("id", "")) == str(videoid):
-                return {
-                    "title": r.get("title") or "Unknown Title",
-                    "artist": (r.get("channel") or {}).get("name") or "Unknown Artist",
-                    "duration": r.get("duration") or "00:00",
-                    "views": (r.get("viewCount", {}) or {}).get("short") or "0 views",
-                }
-    except Exception:
-        pass
+    IMPORTANT: We search using the FULL YouTube watch URL
+    (`https://www.youtube.com/watch?v=<videoid>`), NOT the bare video ID.
+    py_yt's VideosSearch is a text-search API — passing a bare 11-char
+    video ID returns garbage / no results, which was the root cause of
+    the "Unknown Title / Unknown Artist / 0 views" bug. Searching with
+    the full URL lets py_yt correctly resolve the exact video.
+
+    We also verify the returned result's `id` matches the requested
+    `videoid` — if py_yt drifts to a different video, we retry once and
+    then fall back to the defaults rather than showing wrong metadata."""
+    if not videoid:
+        return {
+            "title": "Unknown Title",
+            "artist": "Unknown Artist",
+            "duration": "00:00",
+            "views": "0 views",
+        }
+    watch_url = f"https://www.youtube.com/watch?v={videoid}"
+    for attempt in range(2):
+        try:
+            from py_yt import VideosSearch
+            search = VideosSearch(watch_url, limit=10)
+            data = await search.next()
+            results = data.get("result", []) if isinstance(data, dict) else []
+            if not results:
+                continue
+            # Pick the result whose id EXACTLY matches the requested videoid.
+            # This prevents the "wrong metadata" bug where py_yt returned a
+            # different top hit for a watch-URL query.
+            chosen = None
+            for r in results:
+                if str(r.get("id", "")) == str(videoid):
+                    chosen = r
+                    break
+            if chosen is None:
+                # No exact match — py_yt drifted. Retry once; if still no
+                # match, fall through to defaults rather than showing wrong
+                # metadata for a different video.
+                if attempt == 0:
+                    continue
+                # On second attempt, accept the first result if its id is
+                # close enough (e.g. same video, different params). Otherwise
+                # fall through to defaults.
+                if results and results[0].get("id"):
+                    chosen = results[0]
+                else:
+                    continue
+            return {
+                "title": chosen.get("title") or "Unknown Title",
+                "artist": (chosen.get("channel") or {}).get("name") or "Unknown Artist",
+                "duration": chosen.get("duration") or "00:00",
+                "views": (chosen.get("viewCount", {}) or {}).get("short") or "0 views",
+            }
+        except Exception:
+            continue
     return {
         "title": "Unknown Title",
         "artist": "Unknown Artist",

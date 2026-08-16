@@ -775,18 +775,56 @@ class Call(PyTgCalls):
                     videoid=True,
                     video=video,
                 )
-            except Exception:
-                return await mystic.edit_text(
-                    _["call_6"], disable_web_page_preview=True
+            except Exception as e:
+                LOGGER(__name__).warning(
+                    f"[AUTOPLAY] download failed for queued vid_ track "
+                    f"{videoid} in chat {chat_id}: {type(e).__name__}: {e} "
+                    f"— trying autoplay fallback"
                 )
+                try:
+                    await mystic.delete()
+                except Exception:
+                    pass
+                # Download failed for this queued track. If autoplay is on,
+                # try to start a related track instead of leaving the bot
+                # stuck in voice chat with nothing playing. This prevents
+                # the "AutoPlay stops after a few songs" scenario where a
+                # single bad queued track killed the whole session.
+                if popped and await is_autoplay_on(chat_id):
+                    if await self._try_autoplay_with_retry(chat_id, popped, client):
+                        return
+                return await self._handle_queue_ended(chat_id, client)
+            if not file_path:
+                LOGGER(__name__).warning(
+                    f"[AUTOPLAY] download returned no file for queued vid_ "
+                    f"track {videoid} in chat {chat_id} — trying autoplay "
+                    f"fallback"
+                )
+                try:
+                    await mystic.delete()
+                except Exception:
+                    pass
+                if popped and await is_autoplay_on(chat_id):
+                    if await self._try_autoplay_with_retry(chat_id, popped, client):
+                        return
+                return await self._handle_queue_ended(chat_id, client)
             stream = self._build_stream(file_path, video=video)
             try:
                 await self._play_on_assistant(client, chat_id, stream)
-            except Exception:
-                return await app.send_message(
-                    original_chat_id,
-                    text=_["call_6"],
+            except Exception as e:
+                LOGGER(__name__).warning(
+                    f"[AUTOPLAY] _play_on_assistant failed for queued vid_ "
+                    f"track {videoid} in chat {chat_id}: "
+                    f"{type(e).__name__}: {e} — trying autoplay fallback"
                 )
+                try:
+                    await mystic.delete()
+                except Exception:
+                    pass
+                if popped and await is_autoplay_on(chat_id):
+                    if await self._try_autoplay_with_retry(chat_id, popped, client):
+                        return
+                return await self._handle_queue_ended(chat_id, client)
             img = await get_thumb(videoid)
             button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
             await mystic.delete()

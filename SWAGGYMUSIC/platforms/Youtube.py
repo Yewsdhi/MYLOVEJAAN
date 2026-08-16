@@ -8,9 +8,17 @@ from pyrogram.types import Message
 from py_yt import VideosSearch
 import aiohttp
 
-API_URL = os.environ.get("SHRUTI_API_URL", "https://api.shrutibots.site")
+from SWAGGYMUSIC.logging import LOGGER
 
-API_KEY = os.environ.get("SHRUTI_API_KEY", "ShrutiBotsjyOuNr6aH5inWY06YDYJ") ## Get This API KEY FROM TELEGRAM BOT USERNAME: @SHRUTIAPIBOT 
+# SHRUTI API endpoint and key. Updated to match the newer api01.shrutibots.site
+# endpoint used by the reference Meera Music bot — the older api.shrutibots.site
+# endpoint became unreliable (rate-limited / deprecated) and was the root cause
+# of AutoPlay silently stopping after a handful of songs: every audio download
+# started returning error responses, so all autoplay candidates failed and the
+# bot fell through to "The Music Queue Has Ended".
+API_URL = os.environ.get("SHRUTI_API_URL", "https://api01.shrutibots.site")
+
+API_KEY = os.environ.get("SHRUTI_API_KEY", "ShrutiBotsAlSpfeG7JItQmuoxCqKd") ## Get This API KEY FROM TELEGRAM BOT USERNAME: @SHRUTIAPIBOT
 
 DOWNLOAD_DIR = "downloads"
 
@@ -69,6 +77,97 @@ def time_to_seconds(time):
     return sum(int(x) * 60 ** i for i, x in enumerate(reversed(stringt.split(":"))))
 
 
+def _ytdlp_audio_sync(video_id: str) -> str:
+    """yt-dlp fallback for audio downloads when SHRUTI API fails.
+    Extracts the best-audio stream and saves it as downloads/<video_id>.mp3.
+    Returns the file path on success, None on failure."""
+    if not video_id or len(video_id) < 3:
+        return None
+    os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+    file_path = os.path.join(DOWNLOAD_DIR, f"{video_id}.mp3")
+    if os.path.exists(file_path) and os.path.getsize(file_path) > _MIN_AUDIO_BYTES:
+        return file_path
+    ydl_opts = {
+        "quiet": True,
+        "no_warnings": True,
+        "no_progress": True,
+        "format": "bestaudio/best",
+        "outtmpl": file_path,
+        "noplaylist": True,
+        "default_search": "auto",
+    }
+    # Use cookies if available (helps with age-restricted / regional content).
+    cookiefile = _cookie_file_ytdlp()
+    if cookiefile:
+        ydl_opts["cookiefile"] = cookiefile
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([f"https://www.youtube.com/watch?v={video_id}"])
+    except Exception as e:
+        LOGGER(__name__).warning(
+            f"[DOWNLOAD] yt-dlp audio fallback failed for {video_id}: "
+            f"{type(e).__name__}: {e}"
+        )
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
+        return None
+    if os.path.exists(file_path) and os.path.getsize(file_path) > _MIN_AUDIO_BYTES:
+        return file_path
+    return None
+
+
+def _ytdlp_video_sync(video_id: str) -> str:
+    """yt-dlp fallback for video downloads when SHRUTI API fails."""
+    if not video_id or len(video_id) < 3:
+        return None
+    os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+    file_path = os.path.join(DOWNLOAD_DIR, f"{video_id}.mp4")
+    if os.path.exists(file_path) and os.path.getsize(file_path) > _MIN_VIDEO_BYTES:
+        return file_path
+    ydl_opts = {
+        "quiet": True,
+        "no_warnings": True,
+        "no_progress": True,
+        "format": "best[ext=mp4]/best",
+        "outtmpl": file_path,
+        "noplaylist": True,
+        "default_search": "auto",
+    }
+    cookiefile = _cookie_file_ytdlp()
+    if cookiefile:
+        ydl_opts["cookiefile"] = cookiefile
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([f"https://www.youtube.com/watch?v={video_id}"])
+    except Exception as e:
+        LOGGER(__name__).warning(
+            f"[DOWNLOAD] yt-dlp video fallback failed for {video_id}: "
+            f"{type(e).__name__}: {e}"
+        )
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
+        return None
+    if os.path.exists(file_path) and os.path.getsize(file_path) > _MIN_VIDEO_BYTES:
+        return file_path
+    return None
+
+
+def _cookie_file_ytdlp():
+    """Pick a cookies.txt for yt-dlp from SWAGGYMUSIC/assets (Lustify path)."""
+    import glob as _glob
+    folder = os.path.join(os.getcwd(), "SWAGGYMUSIC", "assets")
+    txt_files = _glob.glob(os.path.join(folder, "*.txt"))
+    if not txt_files:
+        return None
+    return txt_files[0]
+
+
 async def download_song(link: str) -> str:
     video_id = link.split("v=")[-1].split("&")[0] if "v=" in link else link
     if not video_id or len(video_id) < 3:
@@ -79,38 +178,54 @@ async def download_song(link: str) -> str:
     if os.path.exists(file_path) and os.path.getsize(file_path) > _MIN_AUDIO_BYTES:
         return file_path
 
+    # Primary: SHRUTI API. Timeout raised from 120s -> 300s to match the
+    # reference Meera Music bot, which runs reliably overnight. Some legitimate
+    # songs (long mixes, live sets) take longer than 120s to fully download.
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(
                 f"{API_URL}/download",
                 params={"url": video_id, "type": "audio", "api_key": API_KEY},
-                timeout=aiohttp.ClientTimeout(total=120)
+                timeout=aiohttp.ClientTimeout(total=300)
             ) as resp:
-                if resp.status != 200:
-                    return None
-                # Read the full body first so we can validate it before
-                # committing it to disk. The previous code streamed chunks
-                # straight to a file and trusted `getsize > 0`, which let
-                # HTML error pages through as fake .mp3 files.
-                data = await resp.read()
-                if not _looks_like_audio(data):
-                    # The API returned something that isn't a real audio
-                    # file (often an HTML error/preview page with a forged
-                    # content-type). Treat it as a failure so the caller
-                    # can fall back rather than feeding garbage to ffmpeg.
-                    return None
-                with open(file_path, "wb") as f:
-                    f.write(data)
-        if os.path.exists(file_path) and os.path.getsize(file_path) > _MIN_AUDIO_BYTES:
-            return file_path
-        return None
-    except Exception:
+                if resp.status == 200:
+                    data = await resp.read()
+                    if _looks_like_audio(data):
+                        with open(file_path, "wb") as f:
+                            f.write(data)
+                        if os.path.exists(file_path) and os.path.getsize(file_path) > _MIN_AUDIO_BYTES:
+                            return file_path
+                LOGGER(__name__).warning(
+                    f"[DOWNLOAD] SHRUTI audio returned status={resp.status} "
+                    f"for {video_id}, falling back to yt-dlp"
+                )
+    except Exception as e:
+        LOGGER(__name__).warning(
+            f"[DOWNLOAD] SHRUTI audio raised for {video_id}: "
+            f"{type(e).__name__}: {e}, falling back to yt-dlp"
+        )
         if os.path.exists(file_path):
             try:
                 os.remove(file_path)
             except Exception:
                 pass
-        return None
+
+    # Fallback: yt-dlp. This is the key resilience fix — when SHRUTI is
+    # rate-limited or down (which was causing AutoPlay to stop after a few
+    # songs), yt-dlp can still fetch the audio directly from YouTube.
+    # Run in executor because yt-dlp is synchronous and would block the
+    # asyncio event loop.
+    try:
+        loop = asyncio.get_event_loop()
+        fallback_path = await loop.run_in_executor(None, _ytdlp_audio_sync, video_id)
+        if fallback_path:
+            return fallback_path
+    except Exception as e:
+        LOGGER(__name__).warning(
+            f"[DOWNLOAD] yt-dlp audio executor failed for {video_id}: "
+            f"{type(e).__name__}: {e}"
+        )
+    return None
 
 
 async def download_video(link: str) -> str:
@@ -130,25 +245,39 @@ async def download_video(link: str) -> str:
                 params={"url": video_id, "type": "video", "api_key": API_KEY},
                 timeout=aiohttp.ClientTimeout(total=600)
             ) as resp:
-                if resp.status != 200:
-                    return None
-                data = await resp.read()
-                if not _looks_like_audio(data):
-                    # Same guard as download_song — reject HTML/JSON error
-                    # pages that would otherwise be saved as fake .mp4.
-                    return None
-                with open(file_path, "wb") as f:
-                    f.write(data)
-        if os.path.exists(file_path) and os.path.getsize(file_path) > _MIN_VIDEO_BYTES:
-            return file_path
-        return None
-    except Exception:
+                if resp.status == 200:
+                    data = await resp.read()
+                    if _looks_like_audio(data):
+                        with open(file_path, "wb") as f:
+                            f.write(data)
+                        if os.path.exists(file_path) and os.path.getsize(file_path) > _MIN_VIDEO_BYTES:
+                            return file_path
+                LOGGER(__name__).warning(
+                    f"[DOWNLOAD] SHRUTI video returned status={resp.status} "
+                    f"for {video_id}, falling back to yt-dlp"
+                )
+    except Exception as e:
+        LOGGER(__name__).warning(
+            f"[DOWNLOAD] SHRUTI video raised for {video_id}: "
+            f"{type(e).__name__}: {e}, falling back to yt-dlp"
+        )
         if os.path.exists(file_path):
             try:
                 os.remove(file_path)
             except Exception:
                 pass
-        return None
+
+    try:
+        loop = asyncio.get_event_loop()
+        fallback_path = await loop.run_in_executor(None, _ytdlp_video_sync, video_id)
+        if fallback_path:
+            return fallback_path
+    except Exception as e:
+        LOGGER(__name__).warning(
+            f"[DOWNLOAD] yt-dlp video executor failed for {video_id}: "
+            f"{type(e).__name__}: {e}"
+        )
+    return None
 
 
 class YouTubeAPI:
