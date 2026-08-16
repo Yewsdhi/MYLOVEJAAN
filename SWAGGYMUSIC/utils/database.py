@@ -252,6 +252,37 @@ async def autoplay_off(chat_id: int):
     await autoplaydb.delete_one({"chat_id": chat_id})
 
 
+# Thumbnail (per-chat, persisted) - ported from AloneMusic reference.
+# Semantics match the reference: a record in thumbdb means "explicitly
+# disabled"; no record means "default ON" (thumbnail is shown).
+thumbdb = mongodb.thumbnailmode
+thumbcache: Dict[int, bool] = {}
+
+
+async def is_thumb_on(chat_id: int) -> bool:
+    """Per-chat thumbnail state. Default is ON (no DB record = shown).
+    Cached in-process; persisted to MongoDB."""
+    cached = thumbcache.get(chat_id)
+    if cached is not None:
+        return cached
+    data = await thumbdb.find_one({"chat_id": chat_id})
+    status = not bool(data)
+    thumbcache[chat_id] = status
+    return status
+
+
+async def thumb_on(chat_id: int):
+    thumbcache[chat_id] = True
+    await thumbdb.delete_one({"chat_id": chat_id})
+
+
+async def thumb_off(chat_id: int):
+    thumbcache[chat_id] = False
+    await thumbdb.update_one(
+        {"chat_id": chat_id}, {"$set": {"chat_id": chat_id}}, upsert=True
+    )
+
+
 async def get_cmode(chat_id: int) -> int:
     mode = channelconnect.get(chat_id)
     if not mode:

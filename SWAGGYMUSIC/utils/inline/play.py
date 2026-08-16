@@ -28,22 +28,36 @@ def track_markup(_, videoid, user_id, channel, fplay):
     return buttons
 
 
-def _autoplay_button(chat_id, autoplay_status=None):
-    """Build the AutoPlay toggle button with optional ON/OFF status text.
-    If autoplay_status is None, shows just '📩 ᴀᴜᴛᴏᴘʟᴀʏ' (backward compatible)."""
+def _toggle_buttons(chat_id, autoplay_status=None, thumb_status=None):
+    """Build the AutoPlay + Thumbnail side-by-side toggle buttons row.
+    Uses small-cap Unicode for both label and status text. No emojis,
+    no colored circles — exactly per the UI spec.
+    When a status is None (unknown), shows just the label without status."""
     if autoplay_status is True:
-        text = "📩 ᴀᴜᴛᴏᴘʟᴀʏ: ᴏɴ 🟢"
+        ap_text = "ᴀᴜᴛᴏᴘʟᴀʏ: ʏᴇs"
     elif autoplay_status is False:
-        text = "📩 ᴀᴜᴛᴏᴘʟᴀʏ: ᴏꜰꜰ 🔴"
+        ap_text = "ᴀᴜᴛᴏᴘʟᴀʏ: ɴᴏ"
     else:
-        text = "📩 ᴀᴜᴛᴏᴘʟᴀʏ"
-    return InlineKeyboardButton(
-        text=text,
-        callback_data=f"ADMIN AutoPlay|{chat_id}",
-    )
+        ap_text = "ᴀᴜᴛᴏᴘʟᴀʏ"
+    if thumb_status is True:
+        th_text = "ᴛʜᴜᴍʙɴᴀɪʟ: ʏᴇs"
+    elif thumb_status is False:
+        th_text = "ᴛʜᴜᴍʙɴᴀɪʟ: ɴᴏ"
+    else:
+        th_text = "ᴛʜᴜᴍʙɴᴀɪʟ"
+    return [
+        InlineKeyboardButton(
+            text=ap_text,
+            callback_data=f"ADMIN AutoPlay|{chat_id}",
+        ),
+        InlineKeyboardButton(
+            text=th_text,
+            callback_data=f"ADMIN Thumbnail|{chat_id}",
+        ),
+    ]
 
 
-def stream_markup_timer(_, chat_id, played, dur, autoplay_status=None):
+def stream_markup_timer(_, chat_id, played, dur, autoplay_status=None, thumb_status=None):
     played_sec = time_to_seconds(played)
     duration_sec = time_to_seconds(dur)
     percentage = (played_sec / duration_sec) * 100
@@ -84,15 +98,13 @@ def stream_markup_timer(_, chat_id, played, dur, autoplay_status=None):
             InlineKeyboardButton(text="‣‣I", callback_data=f"ADMIN Skip|{chat_id}"),
             InlineKeyboardButton(text="▢", callback_data=f"ADMIN Stop|{chat_id}"),
         ],
-        [
-            _autoplay_button(chat_id, autoplay_status),
-        ],
+        _toggle_buttons(chat_id, autoplay_status, thumb_status),
         [InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close")],
     ]
     return buttons
 
 
-def stream_markup(_, chat_id, autoplay_status=None):
+def stream_markup(_, chat_id, autoplay_status=None, thumb_status=None):
     buttons = [
         [
             InlineKeyboardButton(text="▷", callback_data=f"ADMIN Resume|{chat_id}"),
@@ -101,9 +113,7 @@ def stream_markup(_, chat_id, autoplay_status=None):
             InlineKeyboardButton(text="‣‣I", callback_data=f"ADMIN Skip|{chat_id}"),
             InlineKeyboardButton(text="▢", callback_data=f"ADMIN Stop|{chat_id}"),
         ],
-        [
-            _autoplay_button(chat_id, autoplay_status),
-        ],
+        _toggle_buttons(chat_id, autoplay_status, thumb_status),
         [InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close")],
     ]
     return buttons

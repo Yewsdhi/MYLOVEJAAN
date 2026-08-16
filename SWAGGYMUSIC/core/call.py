@@ -14,8 +14,8 @@ from SWAGGYMUSIC import LOGGER, YouTube, app
 from SWAGGYMUSIC.misc import db
 from SWAGGYMUSIC.utils.database import (add_active_chat, add_active_video_chat,
                                        get_lang, get_loop, group_assistant,
-                                       is_autoend, is_autoplay_on, music_on,
-                                       remove_active_chat,
+                                       is_autoend, is_autoplay_on, is_thumb_on,
+                                       music_on, remove_active_chat,
                                        remove_active_video_chat, set_loop)
 from SWAGGYMUSIC.utils.autoplay import fetch_autoplay_track, remember_played
 from SWAGGYMUSIC.utils.exceptions import AssistantErr
@@ -500,24 +500,39 @@ class Call(PyTgCalls):
         duration_min = track["duration_min"]
 
         try:
-            img = await get_thumb(
-                track["vidid"],
-                title=title,
-                duration=duration_min,
+            thumb_on_now = await is_thumb_on(chat_id)
+            button = stream_markup(
+                _,
+                chat_id,
+                autoplay_status=await is_autoplay_on(chat_id),
+                thumb_status=thumb_on_now,
             )
-            button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
-            run = await app.send_photo(
-                chat_id=original_chat_id,
-                photo=img,
-                has_spoiler=True,
-                caption=_["stream_1"].format(
-                    f"https://t.me/{app.username}?start=info_{track['vidid']}",
-                    title[:23],
-                    duration_min,
-                    "𝐀ᴜᴛᴏᴘʟᴀʏ 🚩",
-                ),
-                reply_markup=InlineKeyboardMarkup(button),
+            caption = _["stream_1"].format(
+                f"https://t.me/{app.username}?start=info_{track['vidid']}",
+                title[:23],
+                duration_min,
+                "𝐀ᴜᴛᴏᴘʟᴀʏ 🚩",
             )
+            if thumb_on_now:
+                img = await get_thumb(
+                    track["vidid"],
+                    title=title,
+                    duration=duration_min,
+                )
+                run = await app.send_photo(
+                    chat_id=original_chat_id,
+                    photo=img,
+                    has_spoiler=True,
+                    caption=caption,
+                    reply_markup=InlineKeyboardMarkup(button),
+                )
+            else:
+                run = await app.send_message(
+                    chat_id=original_chat_id,
+                    text=caption,
+                    disable_web_page_preview=True,
+                    reply_markup=InlineKeyboardMarkup(button),
+                )
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "stream"
         except Exception as e:
@@ -759,19 +774,34 @@ class Call(PyTgCalls):
                 title=title,
                 duration=check[0]["dur"],
             )
-            button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
-            run = await app.send_photo(
-                chat_id=original_chat_id,
-                photo=img,
-                has_spoiler=True,
-                caption=_["stream_1"].format(
-                    f"https://t.me/{app.username}?start=info_{videoid}",
-                    title[:23],
-                    check[0]["dur"],
-                    user,
-                ),
-                reply_markup=InlineKeyboardMarkup(button),
+            thumb_on_now = await is_thumb_on(chat_id)
+            button = stream_markup(
+                _,
+                chat_id,
+                autoplay_status=await is_autoplay_on(chat_id),
+                thumb_status=thumb_on_now,
             )
+            caption = _["stream_1"].format(
+                f"https://t.me/{app.username}?start=info_{videoid}",
+                title[:23],
+                check[0]["dur"],
+                user,
+            )
+            if thumb_on_now:
+                run = await app.send_photo(
+                    chat_id=original_chat_id,
+                    photo=img,
+                    has_spoiler=True,
+                    caption=caption,
+                    reply_markup=InlineKeyboardMarkup(button),
+                )
+            else:
+                run = await app.send_message(
+                    chat_id=original_chat_id,
+                    text=caption,
+                    disable_web_page_preview=True,
+                    reply_markup=InlineKeyboardMarkup(button),
+                )
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "tg"
         elif "vid_" in queued:
@@ -838,20 +868,35 @@ class Call(PyTgCalls):
                 title=title,
                 duration=check[0]["dur"],
             )
-            button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
-            await mystic.delete()
-            run = await app.send_photo(
-                chat_id=original_chat_id,
-                photo=img,
-                has_spoiler=True,
-                caption=_["stream_1"].format(
-                    f"https://t.me/{app.username}?start=info_{videoid}",
-                    title[:23],
-                    check[0]["dur"],
-                    user,
-                ),
-                reply_markup=InlineKeyboardMarkup(button),
+            thumb_on_now = await is_thumb_on(chat_id)
+            button = stream_markup(
+                _,
+                chat_id,
+                autoplay_status=await is_autoplay_on(chat_id),
+                thumb_status=thumb_on_now,
             )
+            await mystic.delete()
+            caption = _["stream_1"].format(
+                f"https://t.me/{app.username}?start=info_{videoid}",
+                title[:23],
+                check[0]["dur"],
+                user,
+            )
+            if thumb_on_now:
+                run = await app.send_photo(
+                    chat_id=original_chat_id,
+                    photo=img,
+                    has_spoiler=True,
+                    caption=caption,
+                    reply_markup=InlineKeyboardMarkup(button),
+                )
+            else:
+                run = await app.send_message(
+                    chat_id=original_chat_id,
+                    text=caption,
+                    disable_web_page_preview=True,
+                    reply_markup=InlineKeyboardMarkup(button),
+                )
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "stream"
 
@@ -864,14 +909,29 @@ class Call(PyTgCalls):
                     original_chat_id,
                     text=_["call_6"],
                 )
-            button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
-            run = await app.send_photo(
-                chat_id=original_chat_id,
-                photo=config.STREAM_IMG_URL,
-                has_spoiler=True,
-                caption=_["stream_2"].format(user),
-                reply_markup=InlineKeyboardMarkup(button),
+            thumb_on_now = await is_thumb_on(chat_id)
+            button = stream_markup(
+                _,
+                chat_id,
+                autoplay_status=await is_autoplay_on(chat_id),
+                thumb_status=thumb_on_now,
             )
+            caption = _["stream_2"].format(user)
+            if thumb_on_now:
+                run = await app.send_photo(
+                    chat_id=original_chat_id,
+                    photo=config.STREAM_IMG_URL,
+                    has_spoiler=True,
+                    caption=caption,
+                    reply_markup=InlineKeyboardMarkup(button),
+                )
+            else:
+                run = await app.send_message(
+                    chat_id=original_chat_id,
+                    text=caption,
+                    disable_web_page_preview=True,
+                    reply_markup=InlineKeyboardMarkup(button),
+                )
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "tg"
         else:
@@ -884,52 +944,97 @@ class Call(PyTgCalls):
                     text=_["call_6"],
                 )
             if videoid == "telegram":
-                button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
-                run = await app.send_photo(
-                    chat_id=original_chat_id,
-                    photo=(
-                        config.TELEGRAM_AUDIO_URL
-                        if str(streamtype) == "audio"
-                        else config.TELEGRAM_VIDEO_URL
-                    ),
-                    caption=_["stream_1"].format(
-                        config.SUPPORT_CHAT, title[:23], check[0]["dur"], user
-                    ),
-                    reply_markup=InlineKeyboardMarkup(button),
+                thumb_on_now = await is_thumb_on(chat_id)
+                button = stream_markup(
+                    _,
+                    chat_id,
+                    autoplay_status=await is_autoplay_on(chat_id),
+                    thumb_status=thumb_on_now,
                 )
+                caption = _["stream_1"].format(
+                    config.SUPPORT_CHAT, title[:23], check[0]["dur"], user
+                )
+                if thumb_on_now:
+                    run = await app.send_photo(
+                        chat_id=original_chat_id,
+                        photo=(
+                            config.TELEGRAM_AUDIO_URL
+                            if str(streamtype) == "audio"
+                            else config.TELEGRAM_VIDEO_URL
+                        ),
+                        caption=caption,
+                        reply_markup=InlineKeyboardMarkup(button),
+                    )
+                else:
+                    run = await app.send_message(
+                        chat_id=original_chat_id,
+                        text=caption,
+                        disable_web_page_preview=True,
+                        reply_markup=InlineKeyboardMarkup(button),
+                    )
                 db[chat_id][0]["mystic"] = run
                 db[chat_id][0]["markup"] = "tg"
             elif videoid == "soundcloud":
-                button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
-                run = await app.send_photo(
-                    chat_id=original_chat_id,
-                    photo=config.SOUNCLOUD_IMG_URL,
-                    caption=_["stream_1"].format(
-                        config.SUPPORT_CHAT, title[:23], check[0]["dur"], user
-                    ),
-                    reply_markup=InlineKeyboardMarkup(button),
+                thumb_on_now = await is_thumb_on(chat_id)
+                button = stream_markup(
+                    _,
+                    chat_id,
+                    autoplay_status=await is_autoplay_on(chat_id),
+                    thumb_status=thumb_on_now,
                 )
+                caption = _["stream_1"].format(
+                    config.SUPPORT_CHAT, title[:23], check[0]["dur"], user
+                )
+                if thumb_on_now:
+                    run = await app.send_photo(
+                        chat_id=original_chat_id,
+                        photo=config.SOUNCLOUD_IMG_URL,
+                        caption=caption,
+                        reply_markup=InlineKeyboardMarkup(button),
+                    )
+                else:
+                    run = await app.send_message(
+                        chat_id=original_chat_id,
+                        text=caption,
+                        disable_web_page_preview=True,
+                        reply_markup=InlineKeyboardMarkup(button),
+                    )
                 db[chat_id][0]["mystic"] = run
                 db[chat_id][0]["markup"] = "tg"
             else:
-                img = await get_thumb(
-                    videoid,
-                    title=title,
-                    duration=check[0]["dur"],
+                thumb_on_now = await is_thumb_on(chat_id)
+                button = stream_markup(
+                    _,
+                    chat_id,
+                    autoplay_status=await is_autoplay_on(chat_id),
+                    thumb_status=thumb_on_now,
                 )
-                button = stream_markup(_, chat_id, autoplay_status=await is_autoplay_on(chat_id))
-                run = await app.send_photo(
-                    chat_id=original_chat_id,
-                    photo=img,
-                    has_spoiler=True,
-                    caption=_["stream_1"].format(
-                        f"https://t.me/{app.username}?start=info_{videoid}",
-                        title[:23],
-                        check[0]["dur"],
-                        user,
-                    ),
-                    reply_markup=InlineKeyboardMarkup(button),
+                caption = _["stream_1"].format(
+                    f"https://t.me/{app.username}?start=info_{videoid}",
+                    title[:23],
+                    check[0]["dur"],
+                    user,
                 )
+                if thumb_on_now:
+                    img = await get_thumb(
+                        videoid,
+                        title=title,
+                        duration=check[0]["dur"],
+                    )
+                    run = await app.send_photo(
+                        chat_id=original_chat_id,
+                        photo=img,
+                        has_spoiler=True,
+                        caption=caption,
+                        reply_markup=InlineKeyboardMarkup(button),
+                    )
+                else:
+                    run = await app.send_message(
+                        chat_id=original_chat_id,
+                        text=caption,
+                        disable_web_page_preview=True,
+                        reply_markup=InlineKeyboardMarkup(button),
+                    )
                 db[chat_id][0]["mystic"] = run
                 db[chat_id][0]["markup"] = "stream"
 
