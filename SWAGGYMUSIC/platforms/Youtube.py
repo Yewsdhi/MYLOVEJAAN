@@ -271,19 +271,26 @@ async def download_song(link: str) -> str:
         ) as client:
             async with client.stream("GET", f"{API_URL}/download", params=params) as resp:
                 if resp.status_code == 200:
-                    # Read in chunks and verify magic bytes before
-                    # committing to disk — protects against the API
-                    # returning an HTML error page.
+                    # IMPORTANT: use a SINGLE iterator. Calling
+                    # resp.aiter_bytes() twice on the same streaming
+                    # response raises httpx.StreamConsumed once the
+                    # first iterator is closed (via `break`). Peek
+                    # with anext(), then continue the same iterator
+                    # in the file-writing loop.
+                    aiter = resp.aiter_bytes(131072)
                     buf = bytearray()
-                    async for chunk in resp.aiter_bytes(131072):
-                        buf.extend(chunk)
-                        if len(buf) >= 4096:
+                    while len(buf) < 4096:
+                        try:
+                            chunk = await anext(aiter)
+                        except StopAsyncIteration:
                             break
+                        buf.extend(chunk)
                     if _looks_like_audio(bytes(buf)):
-                        # Continue streaming the rest into the file.
+                        # Continue streaming the rest into the file
+                        # using the SAME iterator.
                         with open(file_path, "wb") as f:
                             f.write(buf)
-                            async for chunk in resp.aiter_bytes(131072):
+                            async for chunk in aiter:
                                 f.write(chunk)
                         if os.path.exists(file_path) and os.path.getsize(file_path) > _MIN_AUDIO_BYTES:
                             return file_path
@@ -345,15 +352,19 @@ async def download_video(link: str) -> str:
         ) as client:
             async with client.stream("GET", f"{API_URL}/download", params=params) as resp:
                 if resp.status_code == 200:
+                    # IMPORTANT: use a SINGLE iterator (see download_song).
+                    aiter = resp.aiter_bytes(131072)
                     buf = bytearray()
-                    async for chunk in resp.aiter_bytes(131072):
-                        buf.extend(chunk)
-                        if len(buf) >= 4096:
+                    while len(buf) < 4096:
+                        try:
+                            chunk = await anext(aiter)
+                        except StopAsyncIteration:
                             break
+                        buf.extend(chunk)
                     if _looks_like_audio(bytes(buf)):
                         with open(file_path, "wb") as f:
                             f.write(buf)
-                            async for chunk in resp.aiter_bytes(131072):
+                            async for chunk in aiter:
                                 f.write(chunk)
                         if os.path.exists(file_path) and os.path.getsize(file_path) > _MIN_VIDEO_BYTES:
                             return file_path
@@ -1141,16 +1152,20 @@ class YouTubeAPI:
                 async with client.stream("GET", f"{API_URL}/download", params=params) as resp:
                     if resp.status_code != 200:
                         return False
+                    # IMPORTANT: use a SINGLE iterator (see download_song).
+                    aiter = resp.aiter_bytes(131072)
                     buf = bytearray()
-                    async for chunk in resp.aiter_bytes(131072):
-                        buf.extend(chunk)
-                        if len(buf) >= 4096:
+                    while len(buf) < 4096:
+                        try:
+                            chunk = await anext(aiter)
+                        except StopAsyncIteration:
                             break
+                        buf.extend(chunk)
                     if not _looks_like_audio(bytes(buf)):
                         return False
                     with open(fpath, "wb") as f:
                         f.write(buf)
-                        async for chunk in resp.aiter_bytes(131072):
+                        async for chunk in aiter:
                             f.write(chunk)
             min_bytes = _MIN_VIDEO_BYTES if dl_type == "video" else _MIN_AUDIO_BYTES
             return os.path.exists(fpath) and os.path.getsize(fpath) > min_bytes
