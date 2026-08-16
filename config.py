@@ -26,6 +26,14 @@ GIT_TOKEN = getenv("GIT_TOKEN", None)
 #API_URL = getenv("API_URL", 'https://pytdbotapi.thequickearn.xyz') #youtube song url
 #VIDEO_API_URL = getenv("VIDEO_API_URL", 'https://api.video.thequickearn.xyz')
 
+# --- New YouTube API (yt.riteshyt.in) -----------------------------------
+# Primary backend for YouTube search / metadata / thumbnail / download.
+# Used by SWAGGYMUSIC/platforms/Youtube.py. Falls back to
+# youtubesearchpython + yt-dlp if these are unset or the API is down.
+# Override in Heroku config vars if you have your own API instance.
+YOUTUBE_API_URL = getenv("API_URL", "http://yt.riteshyt.in")
+YOUTUBE_API_KEY = getenv("API_KEY", "riteshfree576fd88ed84a3f46c84fd556")
+
 YTPROXY_URL = getenv("YTPROXY_URL", 'https://tgapi.xbitcode.com') ## xBit Music Endpoint.
 YT_API_KEY = getenv("YT_API_KEY" , None ) ## Your API key like: xbit_10000000xx0233 Get from  https://t.me/tgmusic_apibot
 

@@ -43,7 +43,7 @@ async def skip(cli, message: Message, _, chat_id):
                                 # Autoplay: try to start a related track
                                 # before giving up and stopping playback.
                                 # Uses the same retry helper as natural
-                                # song-end so a transient YouTube/SHRUTI/
+                                # song-end so a transient YouTube API/
                                 # network failure doesn't kill autoplay.
                                 if popped and await is_autoplay_on(chat_id):
                                     if await Swaggy._try_autoplay_with_retry(

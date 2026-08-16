@@ -11,9 +11,9 @@ os.makedirs(CACHE_DIR, exist_ok=True)
 # of preference. These URLs are 1:1 with the exact video ID — they NEVER
 # return a different video's thumbnail. The previous implementation called
 # VideosSearch("https://www.youtube.com/watch?v=<vid>", limit=1) and used
-# the top result's thumbnail URL, but py_yt can surface a related video as
-# the top hit, which gave us the WRONG thumbnail for the song that was
-# actually playing. Using i.ytimg.com directly fixes the root cause.
+# the top result's thumbnail URL, but VideosSearch can surface a related
+# video as the top hit, which gave us the WRONG thumbnail for the song
+# that was actually playing. Using i.ytimg.com directly fixes the root cause.
 _THUMB_URLS = (
     "https://i.ytimg.com/vi/{vid}/maxresdefault.jpg",
     "https://i.ytimg.com/vi/{vid}/sddefault.jpg",
@@ -54,19 +54,19 @@ async def _fetch_video_meta(videoid: str) -> dict:
     """Best-effort fetch of title/artist/duration/views for the card overlay.
     The thumbnail itself NEVER depends on this — it's always the exact-video
     i.ytimg.com URL fetched by `_fetch_raw_thumbnail`. If metadata cannot be
-    fetched (e.g. py_yt offline), sensible defaults are returned and the
-    card still renders with the correct thumbnail.
+    fetched (e.g. youtubesearchpython offline), sensible defaults are returned
+    and the card still renders with the correct thumbnail.
 
     IMPORTANT: We search using the FULL YouTube watch URL
     (`https://www.youtube.com/watch?v=<videoid>`), NOT the bare video ID.
-    py_yt's VideosSearch is a text-search API — passing a bare 11-char
-    video ID returns garbage / no results, which was the root cause of
-    the "Unknown Title / Unknown Artist / 0 views" bug. Searching with
-    the full URL lets py_yt correctly resolve the exact video.
+    youtubesearchpython's VideosSearch is a text-search API — passing a
+    bare 11-char video ID returns garbage / no results, which was the root
+    cause of the "Unknown Title / Unknown Artist / 0 views" bug. Searching
+    with the full URL lets VideosSearch correctly resolve the exact video.
 
     We also verify the returned result's `id` matches the requested
-    `videoid` — if py_yt drifts to a different video, we retry once and
-    then fall back to the defaults rather than showing wrong metadata."""
+    `videoid` — if VideosSearch drifts to a different video, we retry once
+    and then fall back to the defaults rather than showing wrong metadata."""
     if not videoid:
         return {
             "title": "Unknown Title",
@@ -77,24 +77,24 @@ async def _fetch_video_meta(videoid: str) -> dict:
     watch_url = f"https://www.youtube.com/watch?v={videoid}"
     for attempt in range(2):
         try:
-            from py_yt import VideosSearch
+            from youtubesearchpython.__future__ import VideosSearch
             search = VideosSearch(watch_url, limit=10)
             data = await search.next()
             results = data.get("result", []) if isinstance(data, dict) else []
             if not results:
                 continue
             # Pick the result whose id EXACTLY matches the requested videoid.
-            # This prevents the "wrong metadata" bug where py_yt returned a
-            # different top hit for a watch-URL query.
+            # This prevents the "wrong metadata" bug where VideosSearch
+            # returned a different top hit for a watch-URL query.
             chosen = None
             for r in results:
                 if str(r.get("id", "")) == str(videoid):
                     chosen = r
                     break
             if chosen is None:
-                # No exact match — py_yt drifted. Retry once; if still no
-                # match, fall through to defaults rather than showing wrong
-                # metadata for a different video.
+                # No exact match — VideosSearch drifted. Retry once; if
+                # still no match, fall through to defaults rather than
+                # showing wrong metadata for a different video.
                 if attempt == 0:
                     continue
                 # On second attempt, accept the first result if its id is

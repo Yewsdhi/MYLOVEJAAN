@@ -338,7 +338,7 @@ class Call(PyTgCalls):
         Resilience (added to fix the "autoplay suddenly stops" bug):
           - Fetches a *list* of candidate tracks and tries each one in turn
             until a download + play succeeds. A single bad video ID, a
-            transient SHRUTI API failure, or a YouTube block no longer
+            transient YouTube API failure, or a YouTube block no longer
             kills the whole autoplay loop.
           - All failures are logged through LOGGER so they appear in Heroku
             logs instead of being silently swallowed.
@@ -551,7 +551,7 @@ class Call(PyTgCalls):
         between attempts. Returns True if any attempt succeeded, False
         otherwise.
 
-        This is the key resilience fix: a single transient YouTube/SHRUTI/
+        This is the key resilience fix: a single transient YouTube API/
         network failure no longer kills the autoplay loop. The caller
         should only fall through to 'Queue Has Ended' after this returns
         False."""
@@ -661,7 +661,7 @@ class Call(PyTgCalls):
             a track ends).
           - When autoplay is ON, retries autoplay_start up to 2 times (3
             total attempts) with a 5s delay before falling through to
-            'Queue Has Ended'. A single transient YouTube/SHRUTI/network
+            'Queue Has Ended'. A single transient YouTube API/network
             failure no longer kills the autoplay loop.
           - All branches log through LOGGER so failures are diagnosable.
         """

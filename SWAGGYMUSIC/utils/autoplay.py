@@ -2,9 +2,9 @@
 Autoplay helper - ported from Meera Music (ShiviMusic) reference.
 
 Primary: fetch YouTube "Mix"/radio playlist ("RD" + videoID) for the seed
-track and pick a random candidate. Fallback: title-text search via py_yt.
-Per-chat history (in-memory, 50 entries) prevents repeating a song that
-was already autoplayed in that chat.
+track and pick a random candidate. Fallback: title-text search via
+youtubesearchpython. Per-chat history (in-memory, 50 entries) prevents
+repeating a song that was already autoplayed in that chat.
 
 Resilience (added to fix the "autoplay suddenly stops" bug):
   - All exceptions are logged through LOGGER so failures show up in Heroku
@@ -18,7 +18,7 @@ Resilience (added to fix the "autoplay suddenly stops" bug):
     chat genuinely gone) aborts the whole step.
   - On top of that, Swaggy._try_autoplay_with_retry wraps autoplay_start
     with up to 3 total attempts (2 retries, 5s apart) so a transient
-    YouTube/SHRUTI/network failure no longer kills the autoplay loop.
+    YouTube API/network failure no longer kills the autoplay loop.
   - There is NO hard cap on the number of autoplay tracks per chat. The
     only constant (_HISTORY_LIMIT) is a per-chat dedup history, not a play
     counter; it auto-resets when all candidates are exhausted.
@@ -30,7 +30,7 @@ import os
 import random
 
 import yt_dlp
-from py_yt import VideosSearch
+from youtubesearchpython.__future__ import VideosSearch
 
 from SWAGGYMUSIC.logging import LOGGER
 
@@ -192,8 +192,9 @@ def _extract_candidates(results, chat_id: int, skip_history: bool):
 
 
 async def _fetch_search_candidates(chat_id: int, seed_title: str) -> list:
-    """Fallback: title-text search via py_yt.VideosSearch. Used when the
-    Mix playlist extraction fails or returns no candidates."""
+    """Fallback: title-text search via youtubesearchpython.VideosSearch.
+    Used when the Mix playlist extraction fails or returns no
+    candidates."""
     if not seed_title:
         return []
     try:

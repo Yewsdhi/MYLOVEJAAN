@@ -38,10 +38,10 @@ async def init():
     for all_module in ALL_MODULES:
         importlib.import_module("SWAGGYMUSIC.plugins" + all_module)
     LOGGER("SWAGGYMUSIC.plugins").info("𝐀𝐥𝐥 𝐅𝐞𝐚𝐭𝐮𝐫𝐞𝐬 𝐋𝐨𝐚𝐝𝐞𝐝 𝐁𝐚𝐛𝐲🥳...")
-    # Prewarm expensive resources (SHRUTI API, py_yt, yt-dlp, i.ytimg)
-    # concurrently with userbot/Swaggy startup so the first /play after a
-    # restart doesn't pay the cold-start penalty. Best-effort: failures
-    # are logged but never block startup.
+    # Prewarm expensive resources (YouTube API, youtubesearchpython, yt-dlp,
+    # i.ytimg) concurrently with userbot/Swaggy startup so the first /play
+    # after a restart doesn't pay the cold-start penalty. Best-effort:
+    # failures are logged but never block startup.
     prewarm_task = asyncio.create_task(prewarm_all())
     await userbot.start()
     await Swaggy.start()
