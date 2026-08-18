@@ -470,21 +470,28 @@ async def add_off(on_off: int):
 
 
 async def is_maintenance():
+    # Returns True only when maintenance is actually ON.
+    # DB convention (set by maintenance_on/off): {"on_off": 1} record present == maintenance ON.
+    # In-memory cache: 1 == ON (record present), 2 == OFF (no record).
     if not maintenance:
         get = await onoffdb.find_one({"on_off": 1})
         if not get:
+            # No record in DB -> maintenance is OFF.
             maintenance.clear()
             maintenance.append(2)
-            return True
+            return False
         else:
+            # Record present -> maintenance is ON.
             maintenance.clear()
             maintenance.append(1)
-            return False
+            return True
     else:
         if 1 in maintenance:
-            return False
-        else:
+            # Cache says record present -> maintenance is ON.
             return True
+        else:
+            # Cache says no record -> maintenance is OFF.
+            return False
 
 
 async def maintenance_off():
