@@ -51,8 +51,8 @@ class Userbot(Client):
         if config.STRING1:
             await self.one.start()
             try:
-                await self.one.join_chat("kriti_bot_update")
-                await self.one.join_chat("KRITI_SUPPORT_GROUP")
+                await self.one.join_chat("messo_network")
+                await self.one.join_chat("messo_network")
             except:
                 pass
             assistants.append(1)
