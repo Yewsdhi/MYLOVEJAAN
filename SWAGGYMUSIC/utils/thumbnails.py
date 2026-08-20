@@ -126,11 +126,11 @@ async def get_thumb(videoid, user_name=None, next_title=None):
                 except:
                     return ImageFont.load_default()
 
-        font_title = get_font("AloneMusic/assets/font.ttf", 60)
-        font_artist = get_font("AloneMusic/assets/font2.ttf", 35)
-        font_label = get_font("AloneMusic/assets/font2.ttf", 30)
-        font_time = get_font("AloneMusic/assets/font3.ttf", 25)
-        font_watermark = get_font("AloneMusic/assets/font2.ttf", 30)
+        font_title = get_font("SWAGGYMUSIC/assets/font.ttf", 60)
+        font_artist = get_font("SWAGGYMUSIC/assets/font2.ttf", 35)
+        font_label = get_font("SWAGGYMUSIC/assets/font2.ttf", 30)
+        font_time = get_font("SWAGGYMUSIC/assets/font3.ttf", 25)
+        font_watermark = get_font("SWAGGYMUSIC/assets/font2.ttf", 30)
 
         def get_text_width(text, font):
             if hasattr(draw, "textlength"):
