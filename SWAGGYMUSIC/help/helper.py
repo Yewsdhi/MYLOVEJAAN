@@ -27,7 +27,7 @@ class Helper(object):
 
 ❍ /ask [ǫυєʀʏ] : sєᴧʀᴄʜ ᴛʜє ᴧηʏ ᴛʏᴘє ǫυєsᴛɪση
 
-❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ sᴘɪᴄʏ ꭙ ɴᴇᴛᴡᴏʀᴋ ˼](https://t.me/SpicyxNetwork)**
+❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ ✦ 𝐌ᴇssᴏ 𝐍ᴇᴛᴡᴏʀᴋ ✦ ˼](https://t.me/messo_network)**
 '''
 
 
@@ -42,7 +42,7 @@ class Helper(object):
 ```
 ❖ єxᴧϻᴘʟє : /google ʜɪɴᴅɪ sᴏɴɢs```
 
-**❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ sᴘɪᴄʏ ꭙ ɴᴇᴛᴡᴏʀᴋ ˼](https://t.me/SpicyxNetwork)**
+**❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ ✦ 𝐌ᴇssᴏ 𝐍ᴇᴛᴡᴏʀᴋ ✦ ˼](https://t.me/messo_network)**
 '''
 
     HELP_03 = '''```
@@ -50,14 +50,14 @@ class Helper(object):
 **❖ sᴇɴᴅ ᴡʜɪsᴘᴇʀ ᴍᴇssᴀɢᴇ ❖**
 
 ```
- єxᴧϻᴘʟє : @LustifyMusicBot @SheOwnsMaixm I love You 😘
+ єxᴧϻᴘʟє : @AnjaliMusic_bot @india_api_bot I love You 😘
 ```
 
 <u>**❖ ᴛєxᴛ ᴛσ ᴠσɪᴄє**</u>
 
 **❍ /tts : [ᴛєxᴛ]
 
-❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ sᴘɪᴄʏ ꭙ ɴᴇᴛᴡᴏʀᴋ ˼](https://t.me/SpicyxNetwork) **
+❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ ✦ 𝐌ᴇssᴏ 𝐍ᴇᴛᴡᴏʀᴋ ✦ ˼](https://t.me/messo_network) **
 '''
 
 
@@ -70,7 +70,7 @@ class Helper(object):
 ❍ /groupinfo : ɢєᴛ ʏσᴜʀ ɢʀσᴜᴘ ɪηғσ `ᴇx :- /groupinfo ɢʀᴏᴜᴘ ᴜsᴇʀɴᴀᴍᴇ`
 ❍ /status : ɢєᴛ ʏσᴜʀ ɢʀσᴜᴘ sᴛᴧᴛᴜs
 
-𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ sᴘɪᴄʏ ꭙ ɴᴇᴛᴡᴏʀᴋ ˼](https://t.me/SpicyxNetwork)**
+𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ ✦ 𝐌ᴇssᴏ 𝐍ᴇᴛᴡᴏʀᴋ ✦ ˼](https://t.me/messo_network)**
 '''
 
 
@@ -83,7 +83,7 @@ class Helper(object):
 ```
 ❖ єxᴧϻᴘʟє : /font delulu Baby```
 
-**❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ sᴘɪᴄʏ ꭙ ɴᴇᴛᴡᴏʀᴋ ˼](https://t.me/SpicyxNetwork) **
+**❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ ✦ 𝐌ᴇssᴏ 𝐍ᴇᴛᴡᴏʀᴋ ✦ ˼](https://t.me/messo_network) **
 '''
 
     HELP_06 = '''```
@@ -91,7 +91,7 @@ class Helper(object):
 
 **❍ /math ➠ sσʟᴠєs ϻᴧᴛʜєϻᴧᴛɪᴄᴧʟ ᴘʀσʙʟєϻs ᴧηᴅ ǫυᴧᴛɪσηs
 
-❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ sᴘɪᴄʏ ꭙ ɴᴇᴛᴡᴏʀᴋ ˼](https://t.me/SpicyxNetwork)**
+❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ ✦ 𝐌ᴇssᴏ 𝐍ᴇᴛᴡᴏʀᴋ ✦ ˼](https://t.me/messo_network)**
 '''
 
 
@@ -106,7 +106,7 @@ class Helper(object):
 ❍ /shayari ➠ ʀᴧηᴅσϻ sʜᴧʏᴧʀɪ ᴛᴧɢ 
 ❍ /shstop ⇴ sᴛσᴘ ᴛᴧɢ
 
-❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ sᴘɪᴄʏ ꭙ ɴᴇᴛᴡᴏʀᴋ ˼](https://t.me/SpicyxNetwork)**
+❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ ✦ 𝐌ᴇssᴏ 𝐍ᴇᴛᴡᴏʀᴋ ✦ ˼](https://t.me/messo_network)**
 '''
 
 
@@ -117,7 +117,7 @@ class Helper(object):
 ❍ /cute ➠ ᴄʜєᴄᴋ ʏσυʀ ᴄυᴛєηєss.
 ❍ /love ➠ ᴧᴅᴅ ᴛᴡᴏ ηᴧϻєs ᴧηᴅ sєє ʟσᴠᴇ ᴘσssɪʙɪʟɪᴛʏ !! `ʟɪᴋᴇ ʀᴧᴊᴧ + sσηᴧ.`
 
-❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ sᴘɪᴄʏ ꭙ ɴᴇᴛᴡᴏʀᴋ ˼](https://t.me/SpicyxNetwork)**
+❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ ✦ 𝐌ᴇssᴏ 𝐍ᴇᴛᴡᴏʀᴋ ✦ ˼](https://t.me/messo_network)**
 '''
 
 
@@ -131,7 +131,7 @@ class Helper(object):
 
 ❍ /hastag : [ᴛєxᴛ]
 
-❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ sᴘɪᴄʏ ꭙ ɴᴇᴛᴡᴏʀᴋ ˼](https://t.me/SpicyxNetwork)**
+❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ ✦ 𝐌ᴇssᴏ 𝐍ᴇᴛᴡᴏʀᴋ ✦ ˼](https://t.me/messo_network)**
 '''
 
 
@@ -143,7 +143,7 @@ class Helper(object):
 ❍ /kang ➠ ʀєᴘʟʏ ᴧηʏ sᴛɪᴄᴋєʀ & ᴄʀєᴀᴛє ʏσᴜʀ sᴛɪᴄᴋєʀ ᴘᴧᴄᴋ
 ❍ /st ➠ ғɪηᴅ ᴏʀɪɢɪηᴧʟ sᴛɪᴄᴋєʀ.
 
-❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ sᴘɪᴄʏ ꭙ ɴᴇᴛᴡᴏʀᴋ ˼](https://t.me/SpicyxNetwork)**
+❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ ✦ 𝐌ᴇssᴏ 𝐍ᴇᴛᴡᴏʀᴋ ✦ ˼](https://t.me/messo_network)**
 '''
 
 
@@ -161,7 +161,7 @@ class Helper(object):
 ❍ /truth [sєηᴅs ᴧ ʀᴧηᴅσϻ ᴛʀυᴛʜ sᴛʀɪηɢ]
 ❍ /dare : [sєηᴅs ᴧ ʀᴧηᴅσϻ ᴅᴧʀє sᴛʀɪηɢ]
 
-❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ sᴘɪᴄʏ ꭙ ɴᴇᴛᴡᴏʀᴋ ˼](https://t.me/SpicyxNetwork)**
+❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ ✦ 𝐌ᴇssᴏ 𝐍ᴇᴛᴡᴏʀᴋ ✦ ˼](https://t.me/messo_network)**
 '''
 
 
@@ -172,7 +172,7 @@ class Helper(object):
 ❍ /q : ᴄʀєᴧᴛє ᴧ ǫυσᴛє ғʀσϻ ᴛʜє ϻєssᴧɢє
 ❍ /q r : ᴄʀєᴧᴛє ᴧ ǫυσᴛє ғʀσϻ ᴛʜє ϻєssᴧɢє ᴡɪᴛʜ ʀєᴘʟʏ
 
-❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ sᴘɪᴄʏ ꭙ ɴᴇᴛᴡᴏʀᴋ ˼](https://t.me/SpicyxNetwork)**
+❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ ✦ 𝐌ᴇssᴏ 𝐍ᴇᴛᴡᴏʀᴋ ✦ ˼](https://t.me/messo_network)**
 '''
 
 
@@ -184,7 +184,7 @@ class Helper(object):
 ❍ /truth : sєηᴅs ᴧ ʀᴧηᴅσϻ ᴛʀυᴛʜ sᴛʀɪηɢ
 ❍ /dare : sєηᴅs ᴧ ʀᴧηᴅσϻ ᴅᴧʀє sᴛʀɪηɢ
 
-❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ sᴘɪᴄʏ ꭙ ɴᴇᴛᴡᴏʀᴋ ˼](https://t.me/SpicyxNetwork)**
+❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ ✦ 𝐌ᴇssᴏ 𝐍ᴇᴛᴡᴏʀᴋ ✦ ˼](https://t.me/messo_network)**
 '''
 
 
@@ -229,7 +229,7 @@ class Helper(object):
 ᴛʜɪs ᴄσϻϻᴧηᴅ ᴡɪʟʟ ᴡσʀᴋ σηʟʏ ɪғ ʏσυ ɢɪᴠє ʙᴧη ʀɪɢʜᴛs ᴛσ ᴛʜє ʙσᴛ ᴡɪᴛʜ ᴧᴅϻɪη```
 
 
-**❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ sᴘɪᴄʏ ꭙ ɴᴇᴛᴡᴏʀᴋ ˼](https://t.me/SpicyxNetwork)**
+**❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ ✦ 𝐌ᴇssᴏ 𝐍ᴇᴛᴡᴏʀᴋ ✦ ˼](https://t.me/messo_network)**
 '''
 
     HELP_15 = '''```
