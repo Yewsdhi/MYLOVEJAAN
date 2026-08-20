@@ -438,9 +438,9 @@ class Helper(object):
 ● ᴧᴅᴅ ϻє ηᴏᴡ ʙᴧʙʏ ɪɴ ʏᴏᴜʀ ɢʀσᴜᴘs.
 ─────────────────────────
 ❖ υᴘᴅᴧᴛєs ᴄʜᴧηηєʟ ➥ [˹ ✦ 𝐌ᴇssᴏ 𝐍ᴇᴛᴡᴏʀᴋ ✦ ˼](https://t.me/messo_network)
-❖ sυᴘᴘσʀᴛ ᴄʜᴧᴛ ➥ [𝑪𝒉𝒂𝒕𝒓𝒐𝒑𝒐𝒍𝒊𝒔 !! 🎀💗](https://t.me/+t25uIUjGL30wMmU9)
-❖ ʙᴏᴛ σᴡηєʀ ➥ [ㅤ- 𝚳 ⋏ 𐩃 ι ϻ 💸](https://t.me/SheOwnsMaxim)
-❖ ʀєᴘσ ʟɪηᴋ ➥ [ᴄʟɪᴄᴋ-ʜєʀє](https://t.me/SheOwnsMaxim)
+❖ sυᴘᴘσʀᴛ ᴄʜᴧᴛ ➥ [BEST FRIEND !! 🎀💗](https://t.me/+RXzN67lesGI3Zjhl)
+❖ ʙᴏᴛ σᴡηєʀ ➥ [ BABA ](https://t.me/BABA_OWNERR)
+❖ ʀєᴘσ ʟɪηᴋ ➥ [ᴄʟɪᴄᴋ-ʜєʀє](https://t.me/+lrWaT1P98l5mYzll)
 ─────────────────────────
 ❖ ᴄʟɪᴄᴋ ση ᴛʜє ʜєʟᴩ ʙυᴛᴛση ᴛσ ɢєᴛ ɪηғσ
    ᴧʙσυᴛ ϻʏ ϻσᴅυʟєs ᴧηᴅ ᴄσϻϻᴧηᴅs...!!
