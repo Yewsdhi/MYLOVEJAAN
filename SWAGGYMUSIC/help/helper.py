@@ -238,7 +238,7 @@ class Helper(object):
 **❍ /kick <userhandle> : ᴋɪᴄᴋs ᴧ υsєʀ συᴛ σғ ᴛʜє ɢʀσυᴘ, (ᴠɪᴧ ʜᴧηᴅʟє, σʀ ʀєᴘʟʏ)
 ❍ /kickme: ᴋɪᴄᴋs ᴛʜє υsєʀ ᴡʜσ ɪssυєᴅ ᴛʜє ᴄσϻϻᴧηᴅ
 
-❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ sᴘɪᴄʏ ꭙ ɴᴇᴛᴡᴏʀᴋ ˼](https://t.me/SpicyxNetwork)**
+❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ ✦ 𝐌ᴇssᴏ 𝐍ᴇᴛᴡᴏʀᴋ ✦ ˼](https://t.me/messo_network)**
 '''
 
 
@@ -255,7 +255,7 @@ class Helper(object):
 ```
 ᴛʜɪs ᴄσϻϻᴧηᴅ ᴡɪʟʟ ᴡσʀᴋ σηʟʏ ɪғ ʏσυ ɢɪᴠє ʙᴧη ʀɪɢʜᴛs ᴛσ ᴛʜє ʙσᴛ ᴡɪᴛʜ ᴧᴅϻɪη```
 
-❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ sᴘɪᴄʏ ꭙ ɴᴇᴛᴡᴏʀᴋ ˼](https://t.me/SpicyxNetwork)**
+❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ ✦ 𝐌ᴇssᴏ 𝐍ᴇᴛᴡᴏʀᴋ ✦ ˼](https://t.me/messo_network)**
 '''
 
 
@@ -285,7 +285,7 @@ class Helper(object):
 ❍ /unbanall ➠ ᴜηʙᴧη ᴧʟʟ ʙᴧη ϻєϻʙєʀs
 ❍ /unpinall ➠ ᴜηᴘɪη ᴧʟʟ ᴘɪη ᴍєssᴧɢᴇ**
 
-**❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ sᴘɪᴄʏ ꭙ ɴᴇᴛᴡᴏʀᴋ ˼](https://t.me/SpicyxNetwork)**
+**❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ ✦ 𝐌ᴇssᴏ 𝐍ᴇᴛᴡᴏʀᴋ ✦ ˼](https://t.me/messo_network)**
 '''
 
 
@@ -295,7 +295,7 @@ class Helper(object):
 **❍ /staff ➠ ᴅɪsᴘʟᴧʏs ᴛʜє ʟɪsᴛ σғ sᴛᴧғғ ϻєϻʙєʀs
 ❍ /bots ➠ ᴅɪsᴘʟᴧʏs ᴛʜє ʟɪsᴛ σғ ʙσᴛs ɪη ᴛʜє ɢʀσυᴘ
 
-❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ sᴘɪᴄʏ ꭙ ɴᴇᴛᴡᴏʀᴋ ˼](https://t.me/SpicyxNetwork)**
+❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ ✦ 𝐌ᴇssᴏ 𝐍ᴇᴛᴡᴏʀᴋ ✦ ˼](https://t.me/messo_network)**
 '''
 
 
@@ -307,7 +307,7 @@ class Helper(object):
 ❍ /setphoto ➠ sєᴛs ᴛʜє ɢʀσυᴘ ᴘʜσᴛσ
 ❍ /removephoto ➠ ʀєϻσᴠєs ᴛʜє ɢʀσυᴘ ᴘʜσᴛσ
 
-❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ sᴘɪᴄʏ ꭙ ɴᴇᴛᴡᴏʀᴋ ˼](https://t.me/SpicyxNetwork)**
+❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ ✦ 𝐌ᴇssᴏ 𝐍ᴇᴛᴡᴏʀᴋ ✦ ˼](https://t.me/messo_network)**
 '''
 
 
@@ -318,7 +318,7 @@ class Helper(object):
 **❍ /zombies ➠ ʀєϻσᴠєs ᴧᴄᴄ ᴅєʟєᴛєᴅ ϻєϻʙєʀs ғʀσϻ ᴛʜє ɢʀσυᴘ
 
 
-❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ sᴘɪᴄʏ ꭙ ɴᴇᴛᴡᴏʀᴋ ˼](https://t.me/SpicyxNetwork)**
+❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ ✦ 𝐌ᴇssᴏ 𝐍ᴇᴛᴡᴏʀᴋ ✦ ˼](https://t.me/messo_network)**
 '''
 
 
@@ -333,7 +333,7 @@ class Helper(object):
 ❍ /basket [ʙᴧsᴋєᴛʙᴧʟʟ ɢᴧϻє]
 ❍ /football [ғσσᴛʙᴧʟʟ ɢᴧϻє]
 
-❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ sᴘɪᴄʏ ꭙ ɴᴇᴛᴡᴏʀᴋ ˼](https://t.me/SpicyxNetwork)**
+❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ ✦ 𝐌ᴇssᴏ 𝐍ᴇᴛᴡᴏʀᴋ ✦ ˼](https://t.me/messo_network)**
 '''
 
 
@@ -344,21 +344,21 @@ class Helper(object):
 ❍ /imposter on
 ❍ /imposter off
 
-❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ sᴘɪᴄʏ ꭙ ɴᴇᴛᴡᴏʀᴋ ˼](https://t.me/SpicyxNetwork)**
+❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ ✦ 𝐌ᴇssᴏ 𝐍ᴇᴛᴡᴏʀᴋ ✦ ˼](https://t.me/messo_network)**
 '''
 
     HELP_23 = '''```
 ❖ sᴧηɢ ϻᴧᴛᴧ ᴄσϻϻᴧηᴅ ❖```
 **❍ /sg ➠ υsєʀ ηᴧϻє ᴧηᴅ υsєʀηᴧϻє ʜɪsᴛσʀʏ
 
-❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ sᴘɪᴄʏ ꭙ ɴᴇᴛᴡᴏʀᴋ ˼](https://t.me/SpicyxNetwork)**
+❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ ✦ 𝐌ᴇssᴏ 𝐍ᴇᴛᴡᴏʀᴋ ✦ ˼](https://t.me/messo_network)**
 '''
 
     HELP_24 = '''```
 ❖ ᴛʀᴧηsʟᴧᴛєs ❖```
 **❍ /tr ➠ ᴄᴧη ᴛʀᴧηꜱʟᴧᴛє ϻυʟᴛɪᴘʟє ʟᴧηɢυᴧɢєs
 
-❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ sᴘɪᴄʏ ꭙ ɴᴇᴛᴡᴏʀᴋ ˼](https://t.me/SpicyxNetwork)**
+❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ ✦ 𝐌ᴇssᴏ 𝐍ᴇᴛᴡᴏʀᴋ ✦ ˼](https://t.me/messo_network)**
 '''
 
 
@@ -369,7 +369,7 @@ class Helper(object):
 
 `єxᴧϻᴘʟє : /git TEAMSPICY`
 
-**❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ sᴘɪᴄʏ ꭙ ɴᴇᴛᴡᴏʀᴋ ˼](https://t.me/SpicyxNetwork)**
+**❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ ✦ 𝐌ᴇssᴏ 𝐍ᴇᴛᴡᴏʀᴋ ✦ ˼](https://t.me/messo_network)**
 '''
 
 
@@ -380,7 +380,7 @@ class Helper(object):
 ❍ /tgm [ʀєᴘʟʏ ᴛσ ᴧηʏ ϻєᴅɪᴧ]
 ❍ /tgt [ʀєᴘʟʏ ᴛσ ᴧηʏ ϻєᴅɪᴧ]
 
-❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ sᴘɪᴄʏ ꭙ ɴᴇᴛᴡᴏʀᴋ ˼](https://t.me/SpicyxNetwork)**
+❖ 𝐏ᴏᴡᴇʀᴇᴅ 𝖡ʏ » [˹ ✦ 𝐌ᴇssᴏ 𝐍ᴇᴛᴡᴏʀᴋ ✦ ˼](https://t.me/messo_network)**
 '''
     HELP_PROMOTION = '''
 **─────────────────────────
