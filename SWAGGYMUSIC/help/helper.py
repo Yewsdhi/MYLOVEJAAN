@@ -406,15 +406,15 @@ class Helper(object):
 ─────────────────────────
        ❖ │ ʀєᴧʟ ᴛɪϻє ʙσᴛ's sᴛᴧᴛυs │❖
 ─────────────────────────
-╭⎋ [ANJALI MUSIC](https://t.me/AnjaliMusic_bot) : ᴧʟɪᴠє 
+╭⎋ [𝙌𝙪𝙚𝙚𝙣 𝙭 𝙢𝙪𝙨𝙞𝙘](https://t.me/Queenhoneybot) : ᴧʟɪᴠє 
 ╰⊚ υᴘᴛɪϻє : 12ʜ:58ϻ:20s | ᴄᴘυ : 5.0% | 
        υsᴧɢє : 24 | ᴧssɪsᴛᴧηᴛs : 01
        
-╭⎋ [˹INDIA API BOT˼](https://t.me/india_api_bot) : ᴧʟɪᴠє 
+╭⎋ [˹ᴍᴇᴇʀᴀ ꭙ ᴍᴜꜱɪᴄ˼](https://t.me/meera_music_bot) : ᴧʟɪᴠє 
 ╰⊚ υᴘᴛɪϻє : 12ʜ:58ϻ:20s | ᴄᴘυ : 5.0% | 
        υsᴧɢє : 24 | ᴧssɪsᴛᴧηᴛs : 02
 
-╭⎋ [˹MY BOT˼](https://t.me/MY_BOT_HUB) : ᴧʟɪᴠє 
+╭⎋ [˹MY BOT˼](https://t.me/ll_ROYAL_ABOUT_ll) : ᴧʟɪᴠє 
 ╰⊚ υᴘᴛɪϻє : 12ʜ:58ϻ:20s | ᴄᴘυ : 5.0% | 
        υsᴧɢє : 24 | ᴧssɪsᴛᴧηᴛs : 02
 ─────────────────────────
