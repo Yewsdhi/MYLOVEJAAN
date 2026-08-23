@@ -178,9 +178,8 @@ queue_6 : "<b>🕚 ᴅυʀᴧᴛɪση :</b> υηᴋησᴡη ᴅυʀᴧᴛɪσ�
 queue_7 : "\n❖ ᴄʟɪᴄᴋ ση ʙυᴛᴛση ʙєʟσᴡ ᴛσ ɢєᴛ ᴡʜσʟє ǫυєυєᴅ ʟɪsᴛ."
 queue_8 : "❖ <b>{0} ᴘʟᴧʏєʀ</b>\n\n🎄 <b>sᴛʀєᴧϻɪηɢ :</b> {1}\n\n🔗 <b>sᴛʀєᴧϻ ᴛʏᴘє :</b> {2}\n🥀 <b>ʀєǫυєsᴛєᴅ ʙʏ :</b> {3}\n❖ {4}"
 
-stream_1 : "<tg-emoji emoji-id=\"5877565553761062314\">💻</tg-emoji><b>𝑺𝒕𝒂𝒓𝒕𝒆𝒅 𝑺𝒕𝒓𝒆𝒂𝒎𝒊𝒏𝒈</b>\n\n<b><tg-emoji emoji-id=\"5927101095213010806\">⚙️</tg-emoji> 𝑻𝒊𝒕𝒍𝒆: </b> <a href=\"{0}\">{1}</a>\n<b><tg-emoji emoji-id=\"5382194935057372936\">⏱</tg-emoji> 𝑫𝒖𝒓𝒂𝒕𝒊𝒐𝒏: </b> {2} ϻɪηᴜᴛєs\n<b><tg-emoji emoji-id=\"6035084557378654059\">👤</tg-emoji> 𝑹𝒆𝒒𝒖𝒆𝒔𝒕𝒆𝒅 𝒃𝒚: </b> {3}\n</b>"
-stream_2 : "<b>𝑺𝒕𝒂𝒓𝒕𝒆𝒅 𝑺𝒕𝒓𝒆𝒂𝒎𝒊𝒏𝒈</b>\n<b>❍ 𝑺𝒕𝒓𝒆𝒂𝒎 𝑻𝒚𝒑𝒆 :</b> 𝑳𝒊𝒗𝒆 𝑺𝒕𝒓𝒆𝒂𝒎 [ᴜʀʟ]\n<b>❍ 𝑷𝒍𝒂𝒚 𝑩𝒚 :</b> {0}"
-
+stream_1 : "<b><blockquote>❖ ˹ sᴛᴀʀᴛᴇᴅ sᴛʀᴇᴀᴍɪɴɢ ɴᴏᴡ ˼ ♪</blockquote></b>\n<blockquote expandable><b>✯ ᴛɪᴛʟᴇ : </b> <a href={0}>{1}</a>\n<b>✬ ᴅᴜʀᴀᴛɪᴏɴ : </b> {2}\n<b>✭ ʙʏ : </b> {3}\n<b>❃ sᴛʀᴇᴀᴍ ᴛʏᴘᴇ  : </b> {4}</blockquote>\n<blockquote><b>❖ ᴘᴏᴡᴇʀᴇᴅ ʙʏ : [˹ʀᴏʏᴀʟ-ʙᴏᴛs˼](https://t.me/ll_ROYAL_ABOUT_ll)</b></blockquote>"
+stream_2 : "<b><blockquote>❖ ˹ sᴛᴀʀᴛᴇᴅ sᴛʀᴇᴀᴍɪɴɢ ɴᴏᴡ ˼ ♪</blockquote></b>\n<blockquote><b>❃ sᴛʀᴇᴀᴍ ᴛʏᴘᴇ  : </b> {1}\n<b>✭ ʙʏ  : </b> {0}</blockquote>"
 
 CLOSE_BUTTON  : "⌯ ᴄʟσsє ⌯"
 BACK_BUTTON : "⌯ ʙᴧᴄᴋ ⌯"
