@@ -110,7 +110,7 @@ class BUTTONS(object):
     SBUTTON = [
         [
             InlineKeyboardButton("⌯ ϻᴜѕɪᴄ ⌯", callback_data="settings_back_helper"),
-            InlineKeyboardButton("⌯ ϻᴧηᴧɢєϻєηᴛ ⌯", callback_data="TOOL_CP"),
+          # InlineKeyboardButton("⌯ ϻᴧηᴧɢєϻєηᴛ ⌯", callback_data="TOOL_CP"),
         ],
         [
             InlineKeyboardButton("ᴧʟʟ ʙσᴛ's", callback_data="MAIN_BACK HELP_ABOUT"),
