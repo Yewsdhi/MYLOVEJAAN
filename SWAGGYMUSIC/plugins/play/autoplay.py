@@ -1,11 +1,13 @@
-"""
-/autoplay command + inline toggle button - ported from Meera Music.
 
-Provides /autoplay [on|off] and /aplay [on|off] commands and an inline
-✅/❌ toggle. State is stored in the DB-backed autoplaydb/autoplaycache
-(same source of truth as the 📩 AutoPlay button and the natural
-song-end / skip handlers).
-"""
+# ===========================================================
+# ©️ 2025-26 All Rights Reserved by Purvi Bots (Im-Notcoder) 🚀
+#
+# This source code is under MIT License 📜
+# ❌ Unauthorized forking, importing, or using this code
+#    without giving proper credit will result in legal action ⚠️
+#
+# 📩 DM for permission : @TheSigmaCoder
+# ===========================================================
 
 from pyrogram import enums, filters
 from pyrogram.types import (
@@ -15,8 +17,8 @@ from pyrogram.types import (
     Message,
 )
 
-from SWAGGYMUSIC import app
-from SWAGGYMUSIC.utils.database import autoplay_off, autoplay_on, is_autoplay_on
+from ShiviMusic import app
+from ShiviMusic.utils.database import autoplay_off, autoplay_on, is_autoplay_on
 from config import BANNED_USERS
 
 
@@ -67,7 +69,7 @@ async def autoplay_cmd(client, message: Message):
     if len(message.command) > 1 and message.from_user:
         if not await _is_admin(chat_id, message.from_user.id):
             return await message.reply_text(
-                "❌ **ᴏɴʟʏ ᴀᴅᴍɪɴs ᴄᴀɴ ᴛᴏɢɢʟᴇ ᴀᴜᴛᴏᴘʟᴀʏ.**"
+                "❌ **sɪʀꜰ ᴀᴅᴍɪɴs ʜɪ ᴀᴜᴛᴏᴘʟᴀʏ ᴏɴ/ᴏꜰꜰ ᴋᴀʀ sᴀᴋᴛᴇ ʜᴀɪɴ.**"
             )
         mode = message.command[1].lower()
         if mode in ("on", "enable"):
@@ -95,11 +97,11 @@ async def autoplay_toggle_cb(client, query: CallbackQuery):
 
     if query.message.chat.id != chat_id:
         return await query.answer(
-            "❌ ᴛʜɪs ʙᴜᴛᴛᴏɴ ɪs ɴᴏᴛ ꜰᴏʀ ᴛʜɪs ᴄʜᴀᴛ.", show_alert=True
+            "❌ ʏᴇ ʙᴜᴛᴛᴏɴ ɪs ᴄʜᴀᴛ ᴋᴇ ʟɪᴇ ɴᴀʜɪ ʜᴀɪ.", show_alert=True
         )
     if not await _is_admin(chat_id, query.from_user.id):
         return await query.answer(
-            "❌ ᴏɴʟʏ ᴀᴅᴍɪɴs ᴄᴀɴ ᴛᴏɢɢʟᴇ ᴛʜɪs.", show_alert=True
+            "❌ sɪʀꜰ ᴀᴅᴍɪɴs ʜɪ ʏᴇ ᴛᴏɢɢʟᴇ ᴋᴀʀ sᴀᴋᴛᴇ ʜᴀɪɴ.", show_alert=True
         )
 
     if action == "on":
@@ -118,3 +120,11 @@ async def autoplay_toggle_cb(client, query: CallbackQuery):
         )
     except Exception:
         pass
+
+# ===========================================================
+# ©️ 2025-26 All Rights Reserved by Purvi Bots (Im-Notcoder) 😎
+#
+# 🧑‍💻 Developer : t.me/TheSigmaCoder
+# 🔗 Source link : GitHub.com/Im-Notcoder/Shivi-V2
+# 📢 Telegram channel : t.me/Purvi_Bots
+# ===========================================================
