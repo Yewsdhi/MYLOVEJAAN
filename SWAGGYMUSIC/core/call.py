@@ -122,20 +122,43 @@ class Call(PyTgCalls):
         chat_id: int,
         stream: types.MediaStream,
     ):
-        try:
-            await client.play(
-                chat_id=chat_id,
-                stream=stream,
-                config=types.GroupCallConfig(auto_start=False),
-            )
-        except exceptions.NoActiveGroupCall:
-            raise
-        except exceptions.NoAudioSourceFound:
-            raise
-        except (ConnectionNotFound, TelegramServerError):
-            raise
-        except Exception:
-            raise
+        # Telegram server/network errors can be temporary. Retry the stream
+        # connection a few times before letting the command handler show an error.
+        last_error = None
+
+        for attempt in range(3):
+            try:
+                await client.play(
+                    chat_id=chat_id,
+                    stream=stream,
+                    config=types.GroupCallConfig(auto_start=False),
+                )
+                return
+
+            except exceptions.NoActiveGroupCall:
+                # A voice/video chat must already be running in the group.
+                raise
+
+            except exceptions.NoAudioSourceFound:
+                raise
+
+            except (ConnectionNotFound, TelegramServerError) as error:
+                last_error = error
+
+                # Clean a possibly half-open/stuck call before retrying.
+                if attempt < 2:
+                    try:
+                        await client.leave_call(chat_id, close=False)
+                    except Exception:
+                        pass
+
+                    await asyncio.sleep(2 + attempt)
+                    continue
+
+                raise last_error
+
+            except Exception:
+                raise
 
     
     async def pause_stream(self, chat_id: int):
@@ -1101,3 +1124,4 @@ class Call(PyTgCalls):
 
 
 Swaggy = Call()
+                  
