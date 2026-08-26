@@ -32,9 +32,9 @@ LUSTIFY = [
     "https://files.catbox.moe/lbv4qf.jpg",
     "https://files.catbox.moe/fjbhwb.jpg",
     "https://files.catbox.moe/nnd7xx.jpg",
-    "https://files.catbox.moe/0wb9m2.jpg",
-    "https://files.catbox.moe/vbhfuf.jpg",
-    "https://files.catbox.moe/n4i17h.jpg",
+    "https://files.catbox.moe/vsdq7c.jpg",
+    "https://files.catbox.moe/3rn79x.jpg",
+    "https://files.catbox.moe/vm220i.jpg",
     "https://files.catbox.moe/2wyrrr.jpg",
     "https://files.catbox.moe/p5k77y.jpg"
 ]
