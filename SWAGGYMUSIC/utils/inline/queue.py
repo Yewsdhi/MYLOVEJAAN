@@ -87,12 +87,12 @@ def aq_markup(_, chat_id):
         [
             InlineKeyboardButton(
                 text="• ᴊσɪη ησω •",
-                url="https://t.me/messo_network",
+                url="https://t.me/ll_ROYAL_ABOUT_ll",
                 style=ButtonStyle.SUCCESS,
             ),
             InlineKeyboardButton(
                 text="• ɢʀᴏᴜᴘ ᴄʜᴀᴛ •",
-                url="https://t.me/+Gi7KEHVRUNlhZjg1",
+                url="https://t.me/hot_dpz_stor",
                 style=ButtonStyle.PRIMARY,
             ),
         ],
