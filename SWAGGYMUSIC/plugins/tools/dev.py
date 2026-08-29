@@ -1,42 +1,31 @@
 """
 SWAGGYMUSIC - Safe Developer Module
 
-Security update:
+This module is intentionally security-safe.
 
-- /eval command removed
-- /sh command removed
-- exec() removed
-- subprocess shell execution removed
-- Hardcoded developer IDs removed
+Dangerous developer functionality has been removed:
+- /eval command
+- /sh command
+- exec()
+- eval()
+- subprocess shell execution
+- os.system()
+- Hardcoded developer IDs
 
-This module intentionally does not expose server command execution
-through Telegram.
+This file does not execute arbitrary Python code or
+operating-system commands through Telegram.
 """
 
 from SWAGGYMUSIC import app
 
-============================================================
 
-SECURITY-SAFE DEV MODULE
+# ============================================================
+# SECURITY-SAFE DEVELOPER MODULE
+# ============================================================
 
-============================================================
+# No Telegram developer commands are registered here.
+# No arbitrary code execution is performed.
+# No shell/OS command execution is performed.
 
-This file intentionally contains no Telegram commands that can
 
-execute arbitrary Python code or operating-system shell commands.
-
-Removed dangerous functionality:
-
-- exec()
-
-- /eval
-
-- subprocess.Popen()
-
-- /sh
-
-- Hardcoded developer IDs
-
-============================================================
-
-all = ["app"]
+__all__ = ["app"]
