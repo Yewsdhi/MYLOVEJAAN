@@ -5,11 +5,11 @@ from typing import Union
 import yt_dlp
 from pyrogram.enums import MessageEntityType
 from pyrogram.types import Message
-from py_yt import Playlist
+from py_yt import VideosSearch, Playlist
 import aiohttp
 
-API_URL = os.environ.get("RONAK_API_URL", "https://web-production-308f7.up.railway.app/docs#/default/download_media_download_get")
-API_KEY = os.environ.get("RONAK_API_KEY", "RonakBots_b17c14625e02e910") ## Get This API KEY FROM @RonakKeyBot 
+API_URL = os.environ.get("ROYAL_API_URL", "https://web-production-308f7.up.railway.app")
+API_KEY = os.environ.get("ROYAL_API_KEY", "RonakBots_b17c14625e02e910") ## Get this API key from your ROYAL bot 
 
 DOWNLOAD_DIR = "downloads"
 
