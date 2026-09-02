@@ -5,7 +5,7 @@ from typing import Union
 import yt_dlp
 from pyrogram.enums import MessageEntityType
 from pyrogram.types import Message
-from py_yt import VideosSearch, Playlist
+from py_yt import Playlist
 import aiohttp
 
 API_URL = os.environ.get("RONAK_API_URL", "https://web-production-94922.up.railway.app")
